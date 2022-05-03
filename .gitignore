@@ -2,7 +2,11 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+*experiments
+*easse
+*kaggle
+*lightning_logs
+*resources
 # C extensions
 *.so
 
