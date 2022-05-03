@@ -37,8 +37,8 @@ def parse_arguments():
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
 })
     ### change the model
-    # p = T5FineTuner.add_model_specific_args(p)
-    p = T5FineTuner_summary.add_model_specific_args(p)
+    p = T5FineTuner.add_model_specific_args(p)
+    #p = T5FineTuner_summary.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
     return args
@@ -117,10 +117,10 @@ def run_training(args, dataset):
     args.dataset = dataset
     print("Dataset: ",args.dataset)
     with log_stdout(args.output_dir / "logs.txt"):
-        train_summary(args)
-        #train(args)
+        #train_summary(args)
+        train(args)
 
-dataset = EPFL_EN
+dataset = WIKILARGE_FILTER_DATASET
 
 # features_kwargs = {
 #     # 'WordRatioFeature': {'target_ratio': 0.8},

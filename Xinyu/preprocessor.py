@@ -116,12 +116,12 @@ def dump(obj, filepath):
 
 def save_preprocessor(preprocessor):
     DUMPS_DIR.mkdir(parents=True, exist_ok=True)
-    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle3'
+    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle'
     dump(preprocessor, PREPROCESSOR_DUMP_FILE)
 
 
 def load_preprocessor():
-    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle3'
+    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle'
     if PREPROCESSOR_DUMP_FILE.exists():
         return load_dump(PREPROCESSOR_DUMP_FILE)
     else:

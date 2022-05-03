@@ -127,8 +127,8 @@ class T5FineTuner(pl.LightningModule):
             complex_score = get_complexity_score(pred)
             ### MLO12: lambda =1.2
             ### MLO11:lambda = 0.5
-            lambda_ = 1.2
-            loss = complex_score ** 2 + loss + lambda_ *(complex_score)
+            lambda_ = 50
+            loss = 100* complex_score ** 2 + loss + lambda_ *(complex_score)
             # self.manual_backward(loss)
             # self.opt.step()
             
@@ -272,8 +272,8 @@ class T5FineTuner(pl.LightningModule):
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-5)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.000001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=10)
-      p.add_argument('-CosLoss','--custom_loss', default=False)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=20)
+      p.add_argument('-CosLoss','--custom_loss', default=True)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
@@ -315,11 +315,11 @@ class TrainDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=256, sample_size=1):
         self.sample_size = sample_size
         print("init TrainDataset ...")
-        self.source_filepath = get_data_filepath(dataset,'train','complex')
-        self.target_filepath = get_data_filepath(dataset,'train','simple')
-        # preprocessor = load_preprocessor()
-        # self.source_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex')
-        # self.target_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'simple')
+        # self.source_filepath = get_data_filepath(dataset,'train','complex')
+        # self.target_filepath = get_data_filepath(dataset,'train','simple')
+        preprocessor = load_preprocessor()
+        self.source_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex')
+        self.target_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'simple')
 
         self.max_len = max_len
         self.tokenizer = tokenizer
@@ -434,8 +434,8 @@ def train(args):
     )
 
     print("Initialize model")
-    model = T5FineTuner(args)
-    #model = T5FineTuner.load_from_checkpoint('experiments/exp_wikilarge_bestfinetune/checkpoint-epoch=1.ckpt')
+    #model = T5FineTuner(args)
+    model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilarge_bestfinetune/checkpoint-epoch=1.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

@@ -8,7 +8,7 @@ from sum_T5 import T5FineTuner_summary
 
 print("******** LOAD MODEL ********")
 model = Summarizer(model='distilbert-base-uncased')
-model2 = T5FineTuner_summary.load_from_checkpoint('experiments/exp_epfl_summary_FineTune_2epoch/checkpoint-epoch=1.ckpt')
+#model2 = T5FineTuner_summary.load_from_checkpoint('experiments/exp_epfl_summary_FineTune_2epoch/checkpoint-epoch=1.ckpt')
 #model = T5FineTuner_summary.load_from_checkpoint("experiments/exp_epfl_summary_FineTune_10epoch/checkpoint-epoch=6.ckpt")
 print('******** GENERATE SIMPLE DOCUMENT ********')
 
@@ -32,7 +32,7 @@ def generate_summary(doc):
     global cnt
     cnt+=1
     print(cnt)
-    gen = model(doc,ratio=0.6)
+    gen = model(doc,ratio=0.4)
     #gen = model.generate(doc)
     return gen
 
