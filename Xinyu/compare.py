@@ -1,18 +1,23 @@
 from easse.sari import corpus_sari
 from preprocessor import WIKILARGE_FILTER_DATASET, yield_lines,yield_sentence_pair
-from SARI_Score import SARIsent
 from rouge_score import rouge_scorer
-
+from tqdm import tqdm
 from Ts_T5 import T5FineTuner
 
 scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-complex_file = 'resources/datasets/wikilargeF/wikilargeF.valid.complex'
-simple_file = 'resources/datasets/wikilargeF/wikilargeF.valid.simple'
+complex_file = 'Xinyu/resources/datasets/wikilargeF/wikilargeF.valid.complex'
+simple_file = 'Xinyu/resources/datasets/wikilargeF/wikilargeF.valid.simple'
 print("******** LOAD MODEL ********")
 
 
 #SARI score:  33.393714573741406 ROUGE-1:  0.32412501691399914 ROUGE-2:  0.17891711541522262 ROUGE-L:  0.28902915494861536  
 #model_sent2sent_new3loss_10epoch = T5FineTuner.load_from_checkpoint("experiments/exp_wikilarge_3loss_1.2/checkpoint-epoch=9.ckpt")
+
+# SARI score:  33.14912030694694 ROUGE-1:  0.3269696732463188 ROUGE-2:  0.180208832383295 ROUGE-L:  0.290500700652506
+#model_sent2sent_new3loss_20_epoch_100_50 = T5FineTuner.load_from_checkpoint("Xinyu/experiments/exp_wikilarge_3loss_100_50/checkpoint-epoch=5.ckpt")
+
+# SARI score:  33.393714573741406 ROUGE-1:  0.32412501691399914 ROUGE-2:  0.17891711541522262 ROUGE-L:  0.28902915494861536
+model_sent2sent_new3loss_20_epoch_20_50 = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilarge_3loss_20_50/checkpoint-epoch=9.ckpt')
 
 #SARI score:  33.14912030694694 ROUGE-1:  0.3269696732463188 ROUGE-2:  0.180208832383295 ROUGE-L:  0.290500700652506
 #model_sent2sent_old_loss_10epoch = T5FineTuner.load_from_checkpoint("experiments/exp_wikilarge_oldloss/checkpoint-epoch=5.ckpt")
@@ -44,8 +49,8 @@ rouge2_score = 0
 rougeL_score = 0
 score = 0
 
-for complex_sent, simple_sent in yield_sentence_pair(complex_file,simple_file):
-    generation = model.generate(complex_sent)
+for complex_sent, simple_sent in (yield_sentence_pair(complex_file, simple_file)):
+    generation = model_sent2sent_new3loss_20_epoch_20_50.generate(complex_sent)
     #generation = model_sen2sent.generate(complex_sent)
     scores = scorer.score(simple_sent,generation)
     # f-measure

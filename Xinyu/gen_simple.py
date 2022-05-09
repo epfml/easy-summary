@@ -6,10 +6,9 @@ from Ts_T5 import T5FineTuner
 from sum_T5 import T5FineTuner_summary
 
 print("******** LOAD MODEL ********")
-model = T5FineTuner.load_from_checkpoint('experiments/exp_wikilarge_no_tokens_10epoch/checkpoint-epoch=8.ckpt')
+model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilarge_epflnewsFineTune_5epoch/checkpoint-epoch=4.ckpt')
 print('******** GENERATE SIMPLE DOCUMENT ********')
-df = pd.read_csv("resources/datasets/epfl_news/output_summary_BERT_T5.csv")
-#df = pd.read_csv('resources/datasets/epfl_news/epfl_news_filtered_data_train.csv')
+df = pd.read_csv("Xinyu/resources/datasets/epfl_news/output_summary_BERT_0.4.csv")
 cnt = 0
 
 def generate_simple_document(doc):
@@ -27,5 +26,5 @@ def generate_simple_document(doc):
 
 
 
-df['sent2sent_no_special_tokens_10epoch'] = df.iloc[:10]['BERT_summary_ratio_0.6'].apply(lambda x:generate_simple_document(x))
-df.to_csv('resources/datasets/epfl_news/output_summary_BERT_T5.csv')
+df['sent2sent_OldLoss_EPFL_finetune_5epoch'] = df.iloc[:10]['BERT_summary_ratio_0.4'].apply(lambda x:generate_simple_document(x))
+df.to_csv('Xinyu/resources/datasets/epfl_news/output_summary_BERT_0.4.csv')

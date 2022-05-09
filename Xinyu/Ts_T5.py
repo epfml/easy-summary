@@ -125,10 +125,10 @@ class T5FineTuner(pl.LightningModule):
             loss = outputs.loss
             pred = self.get_train_output(outputs)
             complex_score = get_complexity_score(pred)
-            ### MLO12: lambda =1.2
-            ### MLO11:lambda = 0.5
-            lambda_ = 50
-            loss = 100* complex_score ** 2 + loss + lambda_ *(complex_score)
+            ### MLO12: 50, 50
+            ### MLO20: 20, 20
+            lambda_ = 20
+            loss = 20* complex_score ** 2 + loss + lambda_ *(complex_score)
             # self.manual_backward(loss)
             # self.opt.step()
             
@@ -272,7 +272,7 @@ class T5FineTuner(pl.LightningModule):
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-5)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.000001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=20)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=10)
       p.add_argument('-CosLoss','--custom_loss', default=True)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())

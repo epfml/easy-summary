@@ -33,13 +33,14 @@ OUTPUT_DIR = REPO_DIR / 'output'
 
 ASSET_DATASET = "asset"
 WIKILARGE_DATASET = 'wikilarge'
-WIKI_DATASET = 'wiki_paragh'
+WIKI_PARA_DATASET = 'wiki_paragh'
 TURKCORPUS_DATASET = "turkcorpus"
 NEWSELA_DATASET = "newsela"
 EPFL_DATASET = 'epfl_news'
 WIKILARGE_FILTER_DATASET = 'wikilargeF'
 WIKI_PARAGH_FILTER_DATASET = 'wiki_paraghF'
 EPFL_EN = 'epfl_news_en'
+WIKI_DOC = 'wiki_doc'
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"
 WORD_FREQUENCY_FILEPATH = RESOURCES_DIR /'enwiki-words-frequency.txt'
