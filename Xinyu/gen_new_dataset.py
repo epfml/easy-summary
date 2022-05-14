@@ -24,17 +24,23 @@ HASH = '26ebb6aa762eac859c7b417fbb503eb7'
 
 for phase in tqdm.tqdm(PHASES):
     '''
-    Apply BERT to the simple sentences and get the summary.
+    Apply BERT to the complex sentences and get the summary.
     Ratio: 0.07
     '''
     if phase == 'test':
         continue
     complex_file_path = get_data_filepath(WIKI_DOC, phase, 'complex')
     save_complex_summary_path = get_data_filepath(WIKI_DOC, phase, 'complex_summary')
-
+    summary = []
     for complex_sent in yield_lines(complex_file_path):
         complex_summary = model(complex_sent, ratio=0.07)
-        write_lines(complex_summary, save_complex_summary_path)
+        summary.append(complex_summary)
+    
+    file_write_obj = open(save_complex_summary_path, 'w', encoding='utf-8')
+    for var in tqdm.tqdm(summary):
+        file_write_obj.write(var)
+        file_write_obj.write('\n')
+    file_write_obj.close()
 
 print("Done!")
 

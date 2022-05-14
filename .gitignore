@@ -5,8 +5,10 @@ __pycache__/
 *experiments
 *easse
 *kaggle
+*vision_transfer
 *lightning_logs
 *resources
+*deep-learning-project
 # C extensions
 *.so
 

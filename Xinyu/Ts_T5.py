@@ -76,7 +76,7 @@ class T5FineTuner(pl.LightningModule):
         encoding = self.tokenizer(
             text,
             truncation=True,
-            max_length=self.args.max_seq_length,
+            max_length=256,
             padding='max_length',
             return_tensors="pt"
         )
@@ -87,11 +87,11 @@ class T5FineTuner(pl.LightningModule):
         beam_outputs = self.model.generate(
             input_ids=input_ids,
             attention_mask=attention_masks,
-            do_sample=False,
-            max_length=128,
-            num_beams=8,
-            top_k=120,
-            top_p=0.98,
+            do_sample=True,
+            max_length=self.args.max_seq_length,
+            num_beams=5,
+            top_k=50,
+            top_p=0.95,
             early_stopping=True,
             num_return_sequences=1
         )
@@ -125,10 +125,10 @@ class T5FineTuner(pl.LightningModule):
             loss = outputs.loss
             pred = self.get_train_output(outputs)
             complex_score = get_complexity_score(pred)
-            ### MLO12: 50, 50
-            ### MLO20: 20, 20
-            lambda_ = 20
-            loss = 20* complex_score ** 2 + loss + lambda_ *(complex_score)
+            ### MLO12: 3, 20
+            ### MLO4: 3, 10
+            lambda_ = 10
+            loss = 3* complex_score ** 2 + loss + lambda_ *(complex_score)
             # self.manual_backward(loss)
             # self.opt.step()
             
@@ -171,11 +171,11 @@ class T5FineTuner(pl.LightningModule):
             beam_outputs = self.model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_masks,
-                do_sample=False,
+                do_sample=True,
                 max_length=self.args.max_seq_length,
-                num_beams=8,
-                top_k=120,
-                top_p=0.98,
+                num_beams=5,
+                top_k=50,
+                top_p=0.95,
                 early_stopping=True,
                 num_return_sequences=1
             ).to(self.device)
@@ -192,7 +192,11 @@ class T5FineTuner(pl.LightningModule):
             pred_sent = generate(source)
             pred_sents.append(pred_sent)
 
-        score = corpus_sari(batch["source"], pred_sents, [batch["targets"]])
+        ### WIKI-large ###
+        # score = corpus_sari(batch["source"], pred_sents, [batch["targets"]])
+        ### turkcorpuse ###
+        score = corpus_sari(batch["source"], pred_sents, batch["targets"])
+
         print("Sari score: ", score)
 
         return 1 - score / 100
@@ -268,17 +272,18 @@ class T5FineTuner(pl.LightningModule):
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
       p.add_argument('-lr','--learning_rate',type=float, default=1e-5)
-      p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=512)
+      p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-5)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.000001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=10)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=20)
       p.add_argument('-CosLoss','--custom_loss', default=True)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
+      p.add_argument('-NumBeams','--num_beams', default=5)
       return p
 
 
@@ -364,10 +369,13 @@ class TrainDataset(Dataset):
 class ValDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=256, sample_size=1):
         self.sample_size = sample_size
-        # self.source_filepath = get_data_filepath(dataset, 'tuning_small', 'complex')
-        # self.target_filepaths = get_data_filepath(dataset, 'tuning_small', 'simple')
-        self.source_filepath = get_data_filepath(dataset, 'valid', 'complex')
-        self.target_filepaths = get_data_filepath(dataset, 'valid', 'simple')
+        ### WIKI-large dataset ###
+        # self.source_filepath = get_data_filepath(dataset, 'valid', 'complex')
+        # self.target_filepaths = get_data_filepath(dataset, 'valid', 'simple')
+
+        ### turkcorpus dataset ###
+        self.source_filepath = get_data_filepath(TURKCORPUS_DATASET, 'valid', 'complex')
+        self.target_filepaths = [get_data_filepath(TURKCORPUS_DATASET, 'valid', 'simple.turk',i)for i in range(8)]
         # if dataset == NEWSELA_DATASET:
         #     self.target_filepaths = [get_data_filepath(dataset, 'valid', 'simple')]
 
@@ -392,9 +400,14 @@ class ValDataset(Dataset):
         for source in yield_lines(self.source_filepath):
             self.inputs.append(source)
         
-        for target in yield_lines(self.target_filepaths):
-            self.targets.append(target)
+        # for target in yield_lines(self.target_filepaths):
+        #     self.targets.append(target)
 
+        ### turkcorpus dataset ###
+        self.targets = [ [] for _ in range(count_line(self.target_filepaths[0]))]
+        for file_path in self.target_filepaths:
+            for i, target in enumerate(yield_lines(file_path)):
+                self.targets[i].append(target)
 
         # self.targets = [[] for _ in range(count_line(self.target_filepaths[0]))]
         # for filepath in self.target_filepaths:
