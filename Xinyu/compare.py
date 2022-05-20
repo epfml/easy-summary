@@ -1,5 +1,5 @@
 from easse.sari import corpus_sari
-from preprocessor import WIKILARGE_FILTER_DATASET,TURKCORPUS_DATASET, get_data_filepath, yield_lines,yield_sentence_pair
+from preprocessor import WIKILARGE_FILTER_DATASET,TURKCORPUS_DATASET, get_data_filepath, read_lines, yield_lines,yield_sentence_pair
 from rouge_score import rouge_scorer
 from tqdm import tqdm
 from Ts_T5 import T5FineTuner
@@ -8,51 +8,69 @@ scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=Tr
 
 print("******** LOAD MODEL ********")
 
-model_sent2sent_turk_3loss_3_20 = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_turk_3loss_3_20/checkpoint-epoch=1.ckpt')
-turk_complex_file = get_data_filepath(TURKCORPUS_DATASET,'valid','complex')
+# turk Validation dataset --- SARI score:  48.03290309584954 ROUGE-1:  0.7447258033811088 ROUGE-2:  0.5708062464033514 ROUGE-L:  0.7227524010471272
+# turk test dataset --- SARI score:  49.68969427940333 ROUGE-1:  0.7488798983288121 ROUGE-2:  0.5774336233005852 ROUGE-L:  0.7265417182777067
+#model_sent2sent_turk_3loss_10epoch_3_20 = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_turk_3loss_3_20/checkpoint-epoch=1.ckpt')
+
+# turk test dataset --- SARI score:  49.88451547408972 ROUGE-1:  0.7515618337582459 ROUGE-2:  0.5810668855023076 ROUGE-L:  0.7295216558340801
+# model_sent2sent_turk_3loss_10epoch_10_10 = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_turk_3loss_10_10/checkpoint-epoch=1.ckpt')
+
+# turk test dataset --- SARI score:  49.73932355011891 ROUGE-1:  0.7498154337784184 ROUGE-2:  0.5787279325978504 ROUGE-L:  0.7280249734075338
+model_sent2sent_turk_3loss_5epoch_0_0 = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_turk_3loss_0_0/checkpoint-epoch=1.ckpt')
+
+# turk Validation dataset --- SARI score:  48.02549284678079 ROUGE-1:  0.7450684883221654 ROUGE-2:  0.5709792304717608 ROUGE-L:  0.7230673821802387
+# turk test dataset --- SARI score:  49.632057751521 ROUGE-1:  0.7516940566456455 ROUGE-2:  0.5798821199966345 ROUGE-L:  0.7294508122605771
+#model_sent2sent_turk_3loss_20epoch_3_10 = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_turk_3loss_3_10/checkpoint-epoch=1.ckpt')
+turk_complex_file = get_data_filepath(TURKCORPUS_DATASET,'test','complex')
 avg_rouge1 = 0
 avg_rouge2 = 0
 avg_rougeL = 0
 avg_sari = 0
 
-for i in range(8):
-    turk_simple_file = get_data_filepath(TURKCORPUS_DATASET,'valid','simple.turk',i)
+for i in range(1):
+    turk_simple_file = get_data_filepath(TURKCORPUS_DATASET,'test','simple.turk',i)
     cnt = 0
     rouge1_score = 0
     rouge2_score = 0
     rougeL_score = 0
     sari_score = 0
+    pred = []
+    comx = []
+    simp = []
     print("******** EVALUATE MODEL ********")
-    for (complex_sent, simple_sent) in yield_sentence_pair(complex_file, simple_file):
+    for (complex_sent, simple_sent) in yield_sentence_pair(turk_complex_file, turk_simple_file):
         
-        generation = model_sent2sent_turk_3loss_3_20.generate(complex_sent)
-        scores = scorer.score(simple_sent,generation)
-        # f-measure
-        rouge1_score += scores['rouge1'][2]
-        rouge2_score += scores['rouge2'][2]
-        rougeL_score += scores['rougeL'][2]
+        generation = model_sent2sent_turk_3loss_5epoch_0_0.generate(complex_sent)
+        comx.append(complex_sent)
+        simp.append(simple_sent)
+        pred.append(generation)
+        # scores = scorer.score(simple_sent,generation)
+        # # f-measure
+        # rouge1_score += scores['rouge1'][2]
+        # rouge2_score += scores['rouge2'][2]
+        # rougeL_score += scores['rougeL'][2]
         cnt+=1
-        print(cnt)
-        if cnt%100==0:
-            print("ROUGE-1: ",rouge1_score/cnt)
-            print("ROUGE-2: ",rouge2_score/cnt)
-            print("ROUGE-L: ",rougeL_score/cnt)
-            print("********")
+        print("{}/{}".format(cnt,len(read_lines(turk_complex_file))))
+        print(generation)
+        # if cnt%100==0:
+        #     print("ROUGE-1: ",rouge1_score/cnt)
+        #     print("ROUGE-2: ",rouge2_score/cnt)
+        #     print("ROUGE-L: ",rougeL_score/cnt)
 
-        sari_score += corpus_sari([complex_sent],[generation],[[simple_sent]])
+    sari_score += corpus_sari(comx,pred,[simp])
 
-        if cnt%100==0:
-            print("SARI: ",sari_score/cnt)
+        # if cnt%100==0:
+        #     print("SARI: ",sari_score/cnt)
 
-    avg_rouge1 += rouge1_score/cnt
-    avg_rouge2 += rouge2_score/cnt
-    avg_rougeL += rougeL_score/cnt
-    avg_sari += sari_score/cnt
+    # avg_rouge1 += rouge1_score/cnt
+    # avg_rouge2 += rouge2_score/cnt
+    # avg_rougeL += rougeL_score/cnt
+    # avg_sari += sari_score/cnt
 
-print("SARI score: ",avg_sari/8)
-print("ROUGE-1: ",avg_rouge1/8)
-print("ROUGE-2: ",avg_rouge2/8)
-print("ROUGE-L: ",avg_rougeL/8)
+print("SARI score: ",sari_score)
+# print("ROUGE-1: ",avg_rouge1/8)
+# print("ROUGE-2: ",avg_rouge2/8)
+# print("ROUGE-L: ",avg_rougeL/8)
 
 # -------------------------- valid on wikilargeF --------------------------
 # complex_file = 'Xinyu/resources/datasets/wikilargeF/wikilargeF.valid.complex'

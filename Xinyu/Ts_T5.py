@@ -51,6 +51,7 @@ class T5FineTuner(pl.LightningModule):
         self.tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
         self.model = self.model.to(self.device)
         self.preprocessor = load_preprocessor()
+        self.args.custom_loss = True
         #self.automatic_optimization = False
 
 
@@ -89,8 +90,8 @@ class T5FineTuner(pl.LightningModule):
             attention_mask=attention_masks,
             do_sample=True,
             max_length=self.args.max_seq_length,
-            num_beams=5,
-            top_k=50,
+            num_beams=10,
+            top_k=130,
             top_p=0.95,
             early_stopping=True,
             num_return_sequences=1
@@ -113,7 +114,7 @@ class T5FineTuner(pl.LightningModule):
         labels[labels[:, :] == self.tokenizer.pad_token_id] = -100
         # zero the gradient buffers of all parameters
         self.opt.zero_grad()
-        
+        #print(self.args.custom_loss)
         # forward pass
         outputs = self(
             input_ids=batch["source_ids"],
@@ -123,12 +124,20 @@ class T5FineTuner(pl.LightningModule):
         )
         if self.args.custom_loss:
             loss = outputs.loss
-            pred = self.get_train_output(outputs)
-            complex_score = get_complexity_score(pred)
-            ### MLO12: 3, 20
-            ### MLO4: 3, 10
-            lambda_ = 10
-            loss = 3* complex_score ** 2 + loss + lambda_ *(complex_score)
+            complex_score = 0
+            ratio = 0.3
+
+            ### Add randomness to the loss
+            if torch.rand(1) < ratio:
+                pred = self.get_train_output(outputs)
+                complex_score = get_complexity_score(pred)
+            
+            #print(complex_score)
+            ### MLO4: 50, 0  + 0.3 prob
+            ### MLO3: 20, 0  + 0.3 prob
+            lambda_1 = 20
+            lambda_2 = 0
+            loss = lambda_1 * complex_score ** 2 + loss
             # self.manual_backward(loss)
             # self.opt.step()
             
@@ -173,8 +182,8 @@ class T5FineTuner(pl.LightningModule):
                 attention_mask=attention_masks,
                 do_sample=True,
                 max_length=self.args.max_seq_length,
-                num_beams=5,
-                top_k=50,
+                num_beams=10,
+                top_k=130,
                 top_p=0.95,
                 early_stopping=True,
                 num_return_sequences=1
@@ -269,21 +278,21 @@ class T5FineTuner(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-m','--model_name', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-5)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
+      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
-      p.add_argument('-AdamEps','--adam_epsilon', default=1e-5)
-      p.add_argument('-WeightDecay','--weight_decay', default = 0.000001)
+      p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
+      p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=20)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=5)
       p.add_argument('-CosLoss','--custom_loss', default=True)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
-      p.add_argument('-NumBeams','--num_beams', default=5)
+      p.add_argument('-NumBeams','--num_beams', default=8)
       return p
 
 
