@@ -1,4 +1,5 @@
 # -- fix path --
+import optparse
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -36,10 +37,10 @@ WIKILARGE_DATASET = 'wikilarge'
 WIKI_PARA_DATASET = 'wiki_paragh'
 TURKCORPUS_DATASET = "turkcorpus"
 NEWSELA_DATASET = "newsela"
-EPFL_DATASET = 'epfl_news'
+EPFL_NEWS = 'epfl_news'
 WIKILARGE_FILTER_DATASET = 'wikilargeF'
 WIKI_PARAGH_FILTER_DATASET = 'wiki_paraghF'
-EPFL_EN = 'epfl_news_en'
+EPFL_NEWS_EN = 'epfl_news_en'
 WIKI_DOC = 'wiki_doc'
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"
@@ -230,14 +231,16 @@ def get_normalized_frequency(word):
     return 1.0 - np.log(1 + freq) / np.log(1 + max)
 
 
-def get_complexity_score(sentence):
+def get_complexity_score(sentence, operation_type = None):
     words = tokenize(remove_stopwords(remove_punctuation(sentence)))
     #words = tokenize(remove_punctuation(sentence))
     words = [word for word in words if word in get_word2rank()]  # remove unknown words
     if len(words) == 0:
         return 1.0
-    
-    return np.array([get_normalized_frequency(word.lower()) for word in words]).mean()
+    if operation_type == 'mean':
+        return np.array([get_normalized_frequency(word.lower()) for word in words]).mean()
+    else:
+        return np.array([get_normalized_frequency(word.lower()) for word in words]).max()
 
 
 

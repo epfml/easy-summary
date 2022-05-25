@@ -10,11 +10,11 @@ NLP = spacy.load('en_core_web_sm')
 
 # for word in text1.ents:
 #     print(word.text, word.label_)
-
 entity_to_tag = {}
 tag_to_entity = {}
-url_to_tag = {}
 tag_to_url = {}
+url_to_tag = {}
+
 ### replace the entity with the tag: ORG, PERSON
 
 def Entity2Tag(Doc):
@@ -28,26 +28,68 @@ def Entity2Tag(Doc):
         text = tok.text
         flag = False
         if tok.ent_type_ in ['ORG', 'PERSON']:
-            entity_to_tag[tok.text] = tok.ent_type_ + str(cnt)
-            tag_to_entity[tok.ent_type_ + str(cnt)] = tok.text
-            output += tok.ent_type_ + str(cnt) + tok.whitespace_
-            flag = True
+            if tok.ent_type_ == 'ORG':
+                if tok.text in entity_to_tag:
+                    tag = entity_to_tag[tok.text]
+                    output += tag + " "
+                    flag = True
+                else:
+                    tag = 'ORG' + str(cnt)
+                    entity_to_tag[tok.text] = tag
+                    tag_to_entity[tag] = tok.text
+                    output += tag + ' '
+                    flag = True
+            else:
+                if tok.text in entity_to_tag:
+                    tag = entity_to_tag[tok.text]
+                    output += tag + ' '
+                    flag = True
+                else:
+                    tag = 'NAME' + str(cnt)
+                    entity_to_tag[tok.text] = tag
+                    tag_to_entity[tag] = tok.text
+                    output += tag + ' '
+                    flag = True
         if tok.like_url:
-            url_to_tag[tok.text] = 'URL' + str(cnt)
-            tag_to_url['URL' + str(cnt)] = tok.text
-            output += 'URL' + str(cnt) + tok.whitespace_
-            flag = True
+            if tok.text in url_to_tag:
+                tag = url_to_tag[tok.text]
+                output += tag + ' '
+                flag = True
+            else:
+                tag = 'URL' + str(cnt)
+                url_to_tag[tok.text] = tag
+                tag_to_url[tag] = tok.text
+                output += tag + ' '
+                flag = True
         if flag:
             cnt += 1
         else:
-            output += text + tok.whitespace_
+            output += text + ' '
     return output
 
-df = pd.read_csv('Xinyu/resources/datasets/epfl_news/epfl_news_filtered_data_train.csv')
-for idx, row in df.iterrows():
-    text = row['document']
-    text = Entity2Tag(text)
-    print(text)
-    break
-    
+def Tag2Entity(Doc):
+    '''
+    replace the tag with the entity
+    '''
+    doc  = NLP(Doc)
+    output = ""
+    for tok in doc:
+        text = tok.text
+        if text in tag_to_entity:
+            output += tag_to_entity[text] + ' '
+        elif text in tag_to_url:
+            output += tag_to_url[text] + ' '
+        else:
+            output += text + ' '
+    return output
+
+def preprocess(df_path):
+    df = pd.read_csv(df_path)
+    df['preprocessed_doc'] = df['document'][:10].apply(lambda x: Entity2Tag(x))
+    return df
+
+
+df_path = 'Xinyu/resources/datasets/epfl_news/epfl_news_filtered_data_train.csv'
+df = preprocess(df_path)
+df.to_csv('Xinyu/resources/datasets/epfl_news/epfl_news_tagged.csv')
 

@@ -130,11 +130,15 @@ class T5FineTuner(pl.LightningModule):
             ### Add randomness to the loss
             if torch.rand(1) < ratio:
                 pred = self.get_train_output(outputs)
-                complex_score = get_complexity_score(pred)
+                ### Mean of the complexity score of the generated sentence
+                # complex_score = get_complexity_score(pred, operation_type = 'mean')
+
+                ### Max of the complexity score of the generated sentence
+                complex_score = get_complexity_score(pred, operation_type = 'max')
             
             #print(complex_score)
-            ### MLO4: 50, 0  + 0.3 prob
-            ### MLO3: 20, 0  + 0.3 prob
+            ### MLO2: 60, 0  + 0.2 prob + mean_complexity
+            ### MLO3: 20, 0  + 0.3 prob + max_complexity
             lambda_1 = 20
             lambda_2 = 0
             loss = lambda_1 * complex_score ** 2 + loss

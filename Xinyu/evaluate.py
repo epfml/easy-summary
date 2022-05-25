@@ -59,7 +59,7 @@ model_dir = None
 _model_dirname = None
 max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_dirname = 'exp_turk_3loss_3_10'
+model_dirname = 'exp_1653060509786739'
 checkpoint_path = 'checkpoint-epoch=1.ckpt'
 
 Model = T5FineTuner.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
@@ -310,9 +310,9 @@ def evaluate_on_TurkCorpus(features_kwargs, phase, model_dirname=None):
 features_kwargs = {
     # 'WordRatioFeature': {'target_ratio': 1.05},
     'CharRatioFeature': {'target_ratio': 0.96},
-    'LevenshteinRatioFeature': {'target_ratio': 0.75},
-    'WordRankRatioFeature': {'target_ratio': 1.05},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.84}
+    'LevenshteinRatioFeature': {'target_ratio': 0.78},
+    'WordRankRatioFeature': {'target_ratio': 0.93},
+    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.74}
 }
 
 evaluate_on_TurkCorpus(features_kwargs, 'test', model_dirname = model_dirname)
@@ -321,3 +321,5 @@ evaluate_on_TurkCorpus(features_kwargs, 'test', model_dirname = model_dirname)
 # C: 0.96 	L: 0.75 	WR: 0.78 	DTD: 0.74 	SARI: 42.34 	 BLEU: 64.51 	 FKGL: 7.45 
 # C: 0.96   L: 0.75     WR: 1.05    DTD: 0.74   SARI: 42.46      BLEU: 69.84     FKGL: 7.68
 #
+######## 20 0.3*prob ###############
+# C: 0.96   L: 0.78     WR: 0.93    DTD: 0.74   SARI: 42.89      BLEU: 72.12     FKGL: 7.45 
