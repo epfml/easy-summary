@@ -52,7 +52,6 @@ class T5FineTuner(pl.LightningModule):
         self.model = self.model.to(self.device)
         self.preprocessor = load_preprocessor()
         self.args.custom_loss = True
-        #self.automatic_optimization = False
 
 
     def is_logger(self):
@@ -125,7 +124,7 @@ class T5FineTuner(pl.LightningModule):
         if self.args.custom_loss:
             loss = outputs.loss
             complex_score = 0
-            ratio = 0.3
+            ratio = 0.5
 
             ### Add randomness to the loss
             if torch.rand(1) < ratio:
@@ -134,11 +133,13 @@ class T5FineTuner(pl.LightningModule):
                 # complex_score = get_complexity_score(pred, operation_type = 'mean')
 
                 ### Max of the complexity score of the generated sentence
-                complex_score = get_complexity_score(pred, operation_type = 'max')
+                complex_score = get_complexity_score(pred, operation_type = 'mean')
             
             #print(complex_score)
-            ### MLO2: 60, 0  + 0.2 prob + mean_complexity
-            ### MLO3: 20, 0  + 0.3 prob + max_complexity
+            ### MLO9: 60, 0  + 0.5 prob + mean_complexity WikiLargeF
+            ### MLO7: 60, 0  + 0.5 prob + mean_complexity WikiLarge 
+            ### MLO8: 20, 0  + 0.5 prob + mean_complexity WikiLarge
+            ### MLO4: 20, 0  + 0.5 prob + mean_complexity WikiParaghF 
             lambda_1 = 20
             lambda_2 = 0
             loss = lambda_1 * complex_score ** 2 + loss
@@ -284,10 +285,10 @@ class T5FineTuner(pl.LightningModule):
       p.add_argument('-m','--model_name', default='t5-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
-      p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
+      p.add_argument('-WeightDecay','--weight_decay', default = 0.01)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
       p.add_argument('-NumEpoch','--num_train_epochs',default=5)
       p.add_argument('-CosLoss','--custom_loss', default=True)

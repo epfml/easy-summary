@@ -9,11 +9,9 @@ import time
 import json
 from contextlib import contextmanager
 from Ts_T5 import train
-from sum_T5 import train_summary
 import optuna
 import argparse
 from Ts_T5 import T5FineTuner
-from sum_T5 import T5FineTuner_summary
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -120,7 +118,7 @@ def run_training(args, dataset):
         #train_summary(args)
         train(args)
 
-dataset = WIKILARGE_FILTER_DATASET
+dataset = WIKI_PARAGH_FILTER_DATASET
 
 # features_kwargs = {
 #     # 'WordRatioFeature': {'target_ratio': 0.8},

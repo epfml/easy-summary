@@ -225,7 +225,7 @@ def get_word_frequency():
         return word_freq
 
 
-def get_normalized_frequency(word):
+def get_normalized_inverse_frequency(word):
     max = 153141437 # the 153141437, the max frequency
     freq = get_word_frequency().get(word, 0)
     return 1.0 - np.log(1 + freq) / np.log(1 + max)
@@ -238,9 +238,9 @@ def get_complexity_score(sentence, operation_type = None):
     if len(words) == 0:
         return 1.0
     if operation_type == 'mean':
-        return np.array([get_normalized_frequency(word.lower()) for word in words]).mean()
+        return np.array([get_normalized_inverse_frequency(word.lower()) for word in words]).mean()
     else:
-        return np.array([get_normalized_frequency(word.lower()) for word in words]).max()
+        return np.array([get_normalized_inverse_frequency(word.lower()) for word in words]).max()
 
 
 
@@ -310,6 +310,7 @@ class WordRankRatioFeature(RatioFeature):
 
     
     def get_rank(self, word):
+        # return get_normalized_inverse_frequency(word)
         rank = get_word2rank().get(word, len(get_word2rank()))
         return np.log(1 + rank)
 
@@ -486,6 +487,6 @@ if __name__ == '__main__':
     # features_kwargs = {}
     #preprocessor = Preprocessor(features_kwargs)
     preprocessor = load_preprocessor()
-    dataset = EPFL_EN
+    dataset = EPFL_NEWS_EN
     print(preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex'))
     # preprocessor.preprocess_dataset(WIKI_DATASET)
