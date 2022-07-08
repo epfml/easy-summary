@@ -1,3 +1,7 @@
+'''
+Evaluate the SARI score and Other metric of TurkCorpus test dataset
+'''
+
 from pathlib import Path
 import sys
 # sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -45,9 +49,7 @@ def log_stdout(filepath, mute_stdout=False):
         sys.stdout = save_stdout
         log_file.close()
 
-
-
-
+# set random seed universal
 def set_seed(seed):
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -59,9 +61,12 @@ model_dir = None
 _model_dirname = None
 max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model_dirname = 'exp_turk_3loss_0_0'
-checkpoint_path = 'checkpoint-epoch=1.ckpt'
 
+# specify the model_name and checkpoint_name
+model_dirname = 'exp_wikilarge_no_tokens_10epoch'
+checkpoint_path = 'checkpoint-epoch=8.ckpt'
+
+# load the model
 Model = T5FineTuner.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
 model = Model.model.to(device)
 tokenizer = Model.tokenizer
@@ -104,6 +109,9 @@ tokenizer = Model.tokenizer
 
 
 def generate(sentence, preprocessor):
+    '''
+    Apply model to generate prediction
+    '''
     # if not torch.cuda.is_available():
     #     print("Simplifying: ", sentence)
     sentence = preprocessor.encode_sentence(sentence)
@@ -115,7 +123,7 @@ def generate(sentence, preprocessor):
     input_ids = encoding["input_ids"].to(device)
     attention_masks = encoding["attention_mask"].to(device)
 
-    # set top_k = 50 and set top_p = 0.95 and num_return_sequences = 3
+    # set top_k = 130 and set top_p = 0.97 and num_return_sequences = 1
     beam_outputs = model.generate(
         input_ids=input_ids,
         attention_mask=attention_masks,
@@ -218,10 +226,12 @@ def evaluate_on(dataset, features_kwargs, phase, model_dirname=None, checkpoint_
 
 
 def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirname=None, post_processing=True):
+    '''
+    Obtain the simplified sentences (predictions) from the original complex sentences.
+    '''
     # load_model(model_dirname)
     # global model, tokenizer, device, model_dir, _model_dirname, max_len, Model
     preprocessor = Preprocessor(features_kwargs)
-    
     total_lines = count_line(complex_filepath)
     print(complex_filepath)
     print(complex_filepath.stem)
@@ -230,7 +240,6 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirn
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
         output_sents = generate(complex_sent, preprocessor)
-        #output_sents = Model.generate(complex_sent)
         print(f"{n_line+1}/{total_lines}", " : ", output_sents)
         if output_sents:
             # output_file.write(output_sents[0] + "\n")
@@ -248,6 +257,9 @@ def post_process(filepath):
     write_lines(lines, filepath)
     
 def evaluate_on_TurkCorpus(features_kwargs, phase, model_dirname=None):
+    '''
+    Evaluate on the TurkCorpus dataset (test stage)
+    '''
     dataset = TURKCORPUS_DATASET
     # global model, tokenizer, device, model_dir, _model_dirname, max_len, Model
     # model_path = EXP_DIR / model_dirname / checkpoint_path
@@ -258,6 +270,7 @@ def evaluate_on_TurkCorpus(features_kwargs, phase, model_dirname=None):
     # output_dir = REPO_DIR / f"outputs/{_model_dirname}"
     output_dir.mkdir(parents=True, exist_ok=True)
     print("Output dir: ", output_dir)
+
     features_hash = generate_hash(features_kwargs)
     output_score_filepath = output_dir / f"score_{features_hash}_{dataset}_{phase}_log.txt"
     complex_filepath = get_data_filepath(dataset, phase, 'complex')
@@ -306,18 +319,67 @@ def evaluate_on_TurkCorpus(features_kwargs, phase, model_dirname=None):
 
 
 
-
+# Specify the token features to use
 features_kwargs = {
     # 'WordRatioFeature': {'target_ratio': 1.05},
-    'CharRatioFeature': {'target_ratio': 0.95},
-    'LevenshteinRatioFeature': {'target_ratio': 0.75},
-    'WordRankRatioFeature': {'target_ratio': 0.75},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.76}
+    'CharRatioFeature': {'target_ratio': 0.94},
+    'LevenshteinRatioFeature': {'target_ratio': 0.78},
+    'WordRankRatioFeature': {'target_ratio': 0.7},
+    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
 }
+
+
+####### without tokens #########
+# C: 0.97         L: 0.78         WR: 0.8         DTD: 0.8        SARI: 38.00      BLEU: 75.52     FKGL: 6.56 
 
 evaluate_on_TurkCorpus(features_kwargs, 'test', model_dirname = model_dirname)
 
-######## 0 0 ###############
-# 
-######## 20 0.3*prob ###############
+######## wikiparagh old loss 10 epoch ###############
+# C: 0.98         L: 0.72         WR: 0.8         DTD: 0.72       SARI: 43.85      BLEU: 68.69     FKGL: 6.68 
+
+######## wikilarge 20 0.5prob mean ########
+# C: 0.96   L: 0.75     WR: 0.94    DTD: 0.77   SARI: 42.95      BLEU: 69.67     FKGL: 6.70
+
+######## wikilarge 60 0.3prob mean ########
+#  C: 0.97         L: 0.73         WR: 0.81        DTD: 0.72       SARI: 43.49      BLEU: 68.22     FKGL: 6.57
+
+######## wikilarge 60 0.5prob mean ########
+# C: 0.96   L: 0.77     WR: 0.74    DTD: 0.74   SARI: 43.00      BLEU: 70.08     FKGL: 7.10 
+
+######## wikilargeF 0 0 ###############
+# C: 0.96   L: 0.68     WR: 0.8     DTD: 0.75   SARI: 43.14      BLEU: 75.35     FKGL: 7.11 
+
+######## 20 0.3*prob mean wikilargeF ###############
 # C: 0.96   L: 0.78     WR: 0.93    DTD: 0.74   SARI: 42.89      BLEU: 72.12     FKGL: 7.45 
+
+######## 60 0.3*prob mean wikilargeF ###############
+# C: 0.98         L: 0.72         WR: 0.9         DTD: 0.74       SARI: 42.93      BLEU: 68.01     FKGL: 6.88 
+
+######## 60 0.5*prob mean wikilargeF ###############
+# C: 0.97         L: 0.77         WR: 0.9         DTD: 0.74       SARI: 42.94      BLEU: 70.23     FKGL: 7.44 
+
+######## paraghF oldloss ############
+# C: 0.98   L: 0.73     WR: 0.8     DTD: 0.72   SARI: 43.76      BLEU: 67.86     FKGL: 6.85 
+
+######## paraghF 20 0.3prob mean ############
+# C: 0.98         L: 0.73         WR: 0.8         DTD: 0.72       SARI: 43.76      BLEU: 67.86     FKGL: 6.85 
+
+######## paraghF 20 0.3prob max ############
+# C: 0.98   L: 0.73     WR: 0.92    DTD: 0.72   SARI: 43.69      BLEU: 68.19     FKGL: 6.83 
+
+####### paraghF 60 0.3prob mean #############
+# C: 0.98         L: 0.73         WR: 0.8         DTD: 0.72       SARI: 43.76      BLEU: 67.86     FKGL: 6.85
+
+####### paraghF 60 0.3prob max #############
+# C: 0.96   L: 0.77     WR: 0.92    DTD: 0.74   SARI: 42.78      BLEU: 67.35     FKGL: 7.35
+
+####### paraghF 60 0.5prob mean #############
+# from wikiparaghF_0_0
+# C: 0.97         L: 0.72         WR: 0.8         DTD: 0.72       SARI: 43.47      BLEU: 65.14     FKGL: 6.81 
+
+# from wikilargeF_0_0
+# C: 0.98         L: 0.73         WR: 0.8         DTD: 0.72       SARI: 43.76      BLEU: 67.86     FKGL: 6.85
+
+####### paraghF 60 0.5prob max #############
+# 
+

@@ -1,7 +1,12 @@
+'''
+Text Simplification with T5 Model
+'''
+
 from functools import lru_cache
 from gc import callbacks
 from pathlib import Path
 from weakref import ref
+import math
 from pytorch_lightning.loggers import TensorBoardLogger
 from easse.sari import corpus_sari
 from torch.nn import functional as F
@@ -47,11 +52,15 @@ class T5FineTuner(pl.LightningModule):
         super(T5FineTuner, self).__init__()
         self.args = args
         self.save_hyperparameters()
+        # Load pre-trained model and tokenizer
         self.model = T5ForConditionalGeneration.from_pretrained(self.args.model_name)
         self.tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
         self.model = self.model.to(self.device)
         self.preprocessor = load_preprocessor()
+        # set custom loss TRUE or FALSE
         self.args.custom_loss = True
+#        self.args.learning_rate = 1e-4
+        self.args.num_train_epochs = 10
 
 
     def is_logger(self):
@@ -113,7 +122,7 @@ class T5FineTuner(pl.LightningModule):
         labels[labels[:, :] == self.tokenizer.pad_token_id] = -100
         # zero the gradient buffers of all parameters
         self.opt.zero_grad()
-        #print(self.args.custom_loss)
+
         # forward pass
         outputs = self(
             input_ids=batch["source_ids"],
@@ -122,9 +131,16 @@ class T5FineTuner(pl.LightningModule):
             decoder_attention_mask=batch['target_mask'],
         )
         if self.args.custom_loss:
+            '''
+            Custom Loss:
+            Loss = oiginal_loss + lambda**2 * complexity_score
+
+            - ratio: control the ratio of sentences we want to compute complexity for training.
+            - lambda: control the weight of the complexity loss.
+            '''
             loss = outputs.loss
             complex_score = 0
-            ratio = 0.5
+            ratio = 0.2
 
             ### Add randomness to the loss
             if torch.rand(1) < ratio:
@@ -134,15 +150,20 @@ class T5FineTuner(pl.LightningModule):
 
                 ### Max of the complexity score of the generated sentence
                 complex_score = get_complexity_score(pred, operation_type = 'mean')
+                complex_score = math.exp(complex_score)
             
             #print(complex_score)
-            ### MLO9: 60, 0  + 0.5 prob + mean_complexity WikiLargeF
-            ### MLO7: 60, 0  + 0.5 prob + mean_complexity WikiLarge 
-            ### MLO8: 20, 0  + 0.5 prob + mean_complexity WikiLarge
-            ### MLO4: 20, 0  + 0.5 prob + mean_complexity WikiParaghF 
-            lambda_1 = 20
+             
+            ### 
+            lambda_1 = 60
             lambda_2 = 0
-            loss = lambda_1 * complex_score ** 2 + loss
+            ### loss1: square of the complexity score
+            #loss = lambda_1 * complex_score ** 2 + loss
+            
+            ### loss2: exponential of the complexity score
+            loss = lambda_1 * complex_score + loss
+
+            
             # self.manual_backward(loss)
             # self.opt.step()
             
@@ -181,7 +202,7 @@ class T5FineTuner(pl.LightningModule):
             input_ids = encoding["input_ids"].to(self.device)
             attention_masks = encoding["attention_mask"].to(self.device)
 
-            # set top_k = 50 and set top_p = 0.95 and num_return_sequences = 3
+            # set top_k = 130 and set top_p = 0.95 and num_return_sequences = 1
             beam_outputs = self.model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_masks,
@@ -208,6 +229,7 @@ class T5FineTuner(pl.LightningModule):
 
         ### WIKI-large ###
         # score = corpus_sari(batch["source"], pred_sents, [batch["targets"]])
+
         ### turkcorpuse ###
         score = corpus_sari(batch["source"], pred_sents, batch["targets"])
 
@@ -285,19 +307,19 @@ class T5FineTuner(pl.LightningModule):
       p.add_argument('-m','--model_name', default='t5-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
+      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
-      p.add_argument('-WeightDecay','--weight_decay', default = 0.01)
+      p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=5)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=10)
       p.add_argument('-CosLoss','--custom_loss', default=True)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
-      p.add_argument('-NumBeams','--num_beams', default=8)
+      #p.add_argument('-NumBeams','--num_beams', default=8)
       return p
 
 
@@ -330,6 +352,7 @@ class LoggingCallback(pl.Callback):
                         writer.write("{} = {}\n".format(key, str(metrics[key])))
 
 
+##### build dataset Loader #####
 class TrainDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=256, sample_size=1):
         self.sample_size = sample_size
@@ -462,7 +485,7 @@ def train(args):
 
     print("Initialize model")
     #model = T5FineTuner(args)
-    model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilarge_bestfinetune/checkpoint-epoch=1.ckpt')
+    model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilargeF_0_0/checkpoint-epoch=2.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

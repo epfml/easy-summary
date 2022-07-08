@@ -1,3 +1,7 @@
+'''
+Preprocess the original dataset and get special-tokened sentences
+'''
+
 # -- fix path --
 import optparse
 from pathlib import Path
@@ -268,7 +272,7 @@ class RatioFeature:
         if not name: name = class_name
         return name
 
-
+### tokens features ###
 class WordRatioFeature(RatioFeature):
     def __init__(self, *args, **kwargs):
         super().__init__(self.get_word_length_ratio, *args, **kwargs)
@@ -484,9 +488,8 @@ if __name__ == '__main__':
         'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
     }
 
-    # features_kwargs = {}
-    #preprocessor = Preprocessor(features_kwargs)
     preprocessor = load_preprocessor()
+    ### processed dataset
     dataset = EPFL_NEWS_EN
     print(preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex'))
     # preprocessor.preprocess_dataset(WIKI_DATASET)
