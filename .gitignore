@@ -6,11 +6,10 @@ __pycache__/
 *kaggle
 *vision_transfer
 *lightning_logs
-*resources
 *deep-learning-project
 # C extensions
 *.so
-
+*resources
 # Distribution / packaging
 .Python
 build/
