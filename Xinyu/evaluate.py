@@ -63,8 +63,8 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_wikilarge_no_tokens_10epoch'
-checkpoint_path = 'checkpoint-epoch=8.ckpt'
+model_dirname = 'exp_wikiparaghF_oldloss'
+checkpoint_path = 'checkpoint-epoch=3.ckpt'
 
 # load the model
 Model = T5FineTuner.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
@@ -317,22 +317,67 @@ def evaluate_on_TurkCorpus(features_kwargs, phase, model_dirname=None):
         print("Already exist: ", output_score_filepath)
         print("".join(read_lines(output_score_filepath)))
 
+def evaluate_on_asset(features_kwargs, phase, model_dirname=None):
+    '''
+    evaluate on the asset dataset (test stage)
+    '''
+    dataset = "asset"
+    # output_dir = REPO_DIR / f"outputs/{_model_dirname}"
+    
+    model_dir = EXP_DIR / model_dirname
+    output_dir = model_dir / "outputs"
+    
+    output_dir.mkdir(parents=True, exist_ok=True)
+    print("Output dir: ", output_dir)
+    
+    features_hash = generate_hash(features_kwargs)
+    output_score_filepath = output_dir / f"score_{features_hash}_{dataset}_{phase}_log.txt"
+    if not output_score_filepath.exists() or count_line(output_score_filepath) == 0:
+        start_time = time.time()
+        complex_filepath = get_data_filepath(dataset, phase, 'orig')
+        pred_filepath = output_dir / f'{features_hash}_{complex_filepath.stem}.txt'
+        ref_filepaths = [get_data_filepath(dataset, phase, 'simp', i) for i in range(10)]
+        print(pred_filepath)
+        if pred_filepath.exists() and count_line(pred_filepath) == count_line(complex_filepath):
+            print("File is already processed.")
+        else:
+            simplify_file(complex_filepath, pred_filepath, features_kwargs, model_dirname)
+            
+        with log_stdout(output_score_filepath):
+            # scores = evaluate_all_metrics(complex_filepath, pred_filepath, ref_filepaths)
+            scores = evaluate_system_output(test_set="asset_test", sys_sents_path=str(pred_filepath), lowercase=True)
+            if "WordRatioFeature" in features_kwargs:
+                print("W:", features_kwargs["WordRatioFeature"]["target_ratio"], "\t", end="")
+            if "CharRatioFeature" in features_kwargs:
+                print("C:", features_kwargs["CharRatioFeature"]["target_ratio"], "\t", end="")
+            if "LevenshteinRatioFeature" in features_kwargs:
+                print("L:", features_kwargs["LevenshteinRatioFeature"]["target_ratio"], "\t", end="")
+            if "WordRankRatioFeature" in features_kwargs:
+                print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
+            if "DependencyTreeDepthRatioFeature" in features_kwargs:
+                print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
+            print("SARI: {:.2f} \t BLEU: {:.2f} \t FKGL: {:.2f} ".format(scores['sari'], scores['bleu'], scores['fkgl']))
 
+            print("Execution time: --- %s seconds ---" % (time.time() - start_time))
+    else:
+        print("Already exist: ", output_score_filepath)
+        print("".join(read_lines(output_score_filepath)))
 
 # Specify the token features to use
 features_kwargs = {
     # 'WordRatioFeature': {'target_ratio': 1.05},
-    'CharRatioFeature': {'target_ratio': 0.94},
-    'LevenshteinRatioFeature': {'target_ratio': 0.78},
-    'WordRankRatioFeature': {'target_ratio': 0.7},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
+    'CharRatioFeature': {'target_ratio': 0.98},
+    'LevenshteinRatioFeature': {'target_ratio': 0.66},
+    'WordRankRatioFeature': {'target_ratio': 0.75},
+    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.81}
 }
 
+####### Turkcorpus #######
+#evaluate_on_TurkCorpus(features_kwargs, 'test', model_dirname = model_dirname)
 
 ####### without tokens #########
 # C: 0.97         L: 0.78         WR: 0.8         DTD: 0.8        SARI: 38.00      BLEU: 75.52     FKGL: 6.56 
 
-evaluate_on_TurkCorpus(features_kwargs, 'test', model_dirname = model_dirname)
 
 ######## wikiparagh old loss 10 epoch ###############
 # C: 0.98         L: 0.72         WR: 0.8         DTD: 0.72       SARI: 43.85      BLEU: 68.69     FKGL: 6.68 
@@ -380,6 +425,21 @@ evaluate_on_TurkCorpus(features_kwargs, 'test', model_dirname = model_dirname)
 # from wikilargeF_0_0
 # C: 0.98         L: 0.73         WR: 0.8         DTD: 0.72       SARI: 43.76      BLEU: 67.86     FKGL: 6.85
 
-####### paraghF 60 0.5prob max #############
-# 
 
+###### ASSET #############
+evaluate_on_asset(features_kwargs, 'test', model_dirname = model_dirname)
+
+##### wikiparagh old loss 10 epoch ###############
+# C: 0.97         L: 0.67         WR: 0.71        DTD: 0.74       SARI: 45.72      BLEU: 66.47     FKGL: 6.46  
+
+##### wikilargeF 0 0 ###############
+# C: 0.94         L: 0.62         WR: 0.72        DTD: 0.71       SARI: 44.82      BLEU: 72.12     FKGL: 6.73 
+
+##### wikilargeF 20 0.3prob mean #############
+# C: 0.94         L: 0.63         WR: 0.8         DTD: 0.76       SARI: 45.15      BLEU: 58.14     FKGL: 6.69
+
+##### wikilargeF 60 0.3prob mean #############
+# C: 0.98         L: 0.65         WR: 0.7         DTD: 0.69       SARI: 45.60      BLEU: 64.83     FKGL: 6.37 
+
+#### wikiparaghF old loss ############
+# C: 0.98         L: 0.66         WR: 0.75        DTD: 0.72       SARI: 45.84      BLEU: 63.20     FKGL: 6.27 
