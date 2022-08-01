@@ -32,17 +32,21 @@ def get_orig_and_refs_sents(test_set, orig_sents_path=None, refs_sents_paths=Non
     if test_set == "custom":
         assert orig_sents_path is not None
         assert refs_sents_paths is not None
-        if type(refs_sents_paths) == str:
-            refs_sents_paths = refs_sents_paths.split(",")
+
+
         orig_sents = read_lines(orig_sents_path)
-        refs_sents = [read_lines(ref_sents_path) for ref_sents_path in refs_sents_paths]
+        # NOTE: refs_sents_paths is a list of paths
+        refs_sents = [read_lines(refs_sents_paths)]        
+        # if type(refs_sents_paths) == str:
+        #     refs_sents_paths = refs_sents_paths.split(",")
+        #refs_sents = [read_lines(ref_sents_path) for ref_sents_path in refs_sents_paths]
     else:
         orig_sents = get_orig_sents(test_set)
         refs_sents = get_refs_sents(test_set)
     # Final checks
-    assert all(
-        [len(orig_sents) == len(ref_sents) for ref_sents in refs_sents]
-    ), f'Not same number of lines for test_set={test_set}, orig_sents_path={orig_sents_path}, refs_sents_paths={refs_sents_paths}'  # noqa: E501
+    # assert all(
+    #     [len(orig_sents) == len(ref_sents) for ref_sents in refs_sents]
+    # ), f'Not same number of lines for test_set={test_set}, orig_sents_path={orig_sents_path}, refs_sents_paths={refs_sents_paths}'  # noqa: E501
     return orig_sents, refs_sents
 
 
