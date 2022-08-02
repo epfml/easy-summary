@@ -437,7 +437,7 @@ features_kwargs = {
 
 ####### WIKI_DOC #######
 evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
-                    phase='test', ratio = 0.9,
+                    phase='test', ratio = 0.1,
                     model_dirname=model_dirname)
 #### wikiparagh oldloss ####
 # original doc
