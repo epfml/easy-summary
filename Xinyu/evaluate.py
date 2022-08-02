@@ -231,7 +231,7 @@ def evaluate_on(dataset, features_kwargs, phase, model_dirname=None, checkpoint_
 
 def back_translation(text):
     X = translator.translate(text, dest = 'de')
-    return translator.translate(X.text, dest = 'en')
+    return translator.translate(X.text, dest = 'en').text
 
 
 def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirname=None, post_processing=True):
@@ -251,7 +251,7 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirn
         output_sents = generate(complex_sent, preprocessor)
         
         # apply back translation
-        # output_sents = back_translation(output_sents)
+        output_sents = back_translation(output_sents)
 
         print(f"{n_line+1}/{total_lines}", " : ", output_sents)
         if output_sents:
@@ -442,7 +442,7 @@ features_kwargs = {
     'CharRatioFeature': {'target_ratio': 0.94},
     'LevenshteinRatioFeature': {'target_ratio': 0.67},
     'WordRankRatioFeature': {'target_ratio': 0.74},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.74}
+    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.76}
 }
 
 ####### WIKI_DOC #######
@@ -466,7 +466,7 @@ evaluate_on_WIKIDOC(features_kwargs=features_kwargs,
 # C: 0.93         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.12      BLEU: 8.21      FKGL: 9.17  
 
 # doc 0.9 summarization
-# C: 0.94         L: 0.67         WR: 0.74        DTD: 0.72       SARI: 39.72      BLEU: 10.62     FKGL: 8.57
+# C: 0.94         L: 0.67         WR: 0.74        DTD: 0.76       SARI: 39.74      BLEU: 10.63     FKGL: 8.60 
 
 
 ####### Turkcorpus #######
