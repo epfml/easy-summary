@@ -59,7 +59,7 @@ def set_seed(seed):
 set_seed(12)
 model_dir = None
 _model_dirname = None
-max_len = 512
+max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
@@ -429,9 +429,9 @@ def evaluate_on_WIKIDOC(features_kwargs, phase, ratio=None, model_dirname = None
 # Specify the token features to use
 features_kwargs = {
     # 'WordRatioFeature': {'target_ratio': 1.05},
-    'CharRatioFeature': {'target_ratio': 0.97},
-    'LevenshteinRatioFeature': {'target_ratio': 0.62},
-    'WordRankRatioFeature': {'target_ratio': 0.68},
+    'CharRatioFeature': {'target_ratio': 0.94},
+    'LevenshteinRatioFeature': {'target_ratio': 0.67},
+    'WordRankRatioFeature': {'target_ratio': 0.72},
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.72}
 }
 
@@ -456,7 +456,7 @@ evaluate_on_WIKIDOC(features_kwargs=features_kwargs,
 # C: 0.93         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.12      BLEU: 8.21      FKGL: 9.17  
 
 # doc 0.9 summarization
-# C: 0.94         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.13      BLEU: 7.94      FKGL: 9.66 
+# C: 0.94         L: 0.67         WR: 0.7         DTD: 0.72       SARI: 39.65      BLEU: 10.72     FKGL: 8.65
 
 
 ####### Turkcorpus #######
