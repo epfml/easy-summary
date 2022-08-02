@@ -20,6 +20,8 @@ from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DI
 from preprocessor import write_lines, yield_lines, count_line, read_lines, generate_hash
 from easse.sari import corpus_sari
 import time
+from googletrans import Translator
+
 
 @contextmanager
 def log_stdout(filepath, mute_stdout=False):
@@ -70,7 +72,7 @@ checkpoint_path = 'checkpoint-epoch=3.ckpt'
 Model = T5FineTuner.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
 model = Model.model.to(device)
 tokenizer = Model.tokenizer
-
+translator = Translator()
 
 
 # def load_model(model_dirname=None):
@@ -227,6 +229,10 @@ def evaluate_on(dataset, features_kwargs, phase, model_dirname=None, checkpoint_
         print("Already exist: ", output_score_filepath)
         print("".join(read_lines(output_score_filepath)))
 
+def back_translation(text):
+    X = translator.translate(text, dest = 'de')
+    return translator.translate(X.text, dest = 'en')
+
 
 def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirname=None, post_processing=True):
     '''
@@ -243,6 +249,10 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirn
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
         output_sents = generate(complex_sent, preprocessor)
+        
+        # apply back translation
+        # output_sents = back_translation(output_sents)
+
         print(f"{n_line+1}/{total_lines}", " : ", output_sents)
         if output_sents:
             # output_file.write(output_sents[0] + "\n")
@@ -431,8 +441,8 @@ features_kwargs = {
     # 'WordRatioFeature': {'target_ratio': 1.05},
     'CharRatioFeature': {'target_ratio': 0.94},
     'LevenshteinRatioFeature': {'target_ratio': 0.67},
-    'WordRankRatioFeature': {'target_ratio': 0.72},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.72}
+    'WordRankRatioFeature': {'target_ratio': 0.74},
+    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.74}
 }
 
 ####### WIKI_DOC #######
@@ -456,7 +466,7 @@ evaluate_on_WIKIDOC(features_kwargs=features_kwargs,
 # C: 0.93         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.12      BLEU: 8.21      FKGL: 9.17  
 
 # doc 0.9 summarization
-# C: 0.94         L: 0.67         WR: 0.7         DTD: 0.72       SARI: 39.65      BLEU: 10.72     FKGL: 8.65
+# C: 0.94         L: 0.67         WR: 0.74        DTD: 0.72       SARI: 39.72      BLEU: 10.62     FKGL: 8.57
 
 
 ####### Turkcorpus #######
