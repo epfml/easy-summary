@@ -429,19 +429,22 @@ def evaluate_on_WIKIDOC(features_kwargs, phase, ratio=None, model_dirname = None
 # Specify the token features to use
 features_kwargs = {
     # 'WordRatioFeature': {'target_ratio': 1.05},
-    'CharRatioFeature': {'target_ratio': 0.93},
+    'CharRatioFeature': {'target_ratio': 0.97},
     'LevenshteinRatioFeature': {'target_ratio': 0.62},
-    'WordRankRatioFeature': {'target_ratio': 0.64},
+    'WordRankRatioFeature': {'target_ratio': 0.68},
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.72}
 }
 
 ####### WIKI_DOC #######
 evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
-                    phase='test', ratio = 0.7,
+                    phase='test', ratio = 0.9,
                     model_dirname=model_dirname)
 #### wikiparagh oldloss ####
 # original doc
 # C: 0.95         L: 0.68         WR: 0.82        DTD: 0.79       SARI: 39.24      BLEU: 8.90      FKGL: 10.03 
+
+# doc 0.1 summarization
+# 
 
 # doc 0.3 summarization
 # C: 0.94         L: 0.61         WR: 0.79        DTD: 0.72       SARI: 37.40      BLEU: 7.88      FKGL: 9.45 
@@ -452,7 +455,8 @@ evaluate_on_WIKIDOC(features_kwargs=features_kwargs,
 # doc 0.7 summarization
 # C: 0.93         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.12      BLEU: 8.21      FKGL: 9.17  
 
-
+# doc 0.9 summarization
+# C: 0.94         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.13      BLEU: 7.94      FKGL: 9.66 
 
 
 ####### Turkcorpus #######
