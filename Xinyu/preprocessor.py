@@ -1,4 +1,9 @@
+'''
+Preprocess the original dataset and get special-tokened sentences
+'''
+
 # -- fix path --
+import optparse
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -36,10 +41,10 @@ WIKILARGE_DATASET = 'wikilarge'
 WIKI_PARA_DATASET = 'wiki_paragh'
 TURKCORPUS_DATASET = "turkcorpus"
 NEWSELA_DATASET = "newsela"
-EPFL_DATASET = 'epfl_news'
+EPFL_NEWS = 'epfl_news'
 WIKILARGE_FILTER_DATASET = 'wikilargeF'
 WIKI_PARAGH_FILTER_DATASET = 'wiki_paraghF'
-EPFL_EN = 'epfl_news_en'
+EPFL_NEWS_EN = 'epfl_news_en'
 WIKI_DOC = 'wiki_doc'
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"
@@ -117,12 +122,12 @@ def dump(obj, filepath):
 
 def save_preprocessor(preprocessor):
     DUMPS_DIR.mkdir(parents=True, exist_ok=True)
-    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle3'
+    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle'
     dump(preprocessor, PREPROCESSOR_DUMP_FILE)
 
 
 def load_preprocessor():
-    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle3'
+    PREPROCESSOR_DUMP_FILE = DUMPS_DIR / 'preprocessor.pickle'
     if PREPROCESSOR_DUMP_FILE.exists():
         return load_dump(PREPROCESSOR_DUMP_FILE)
     else:
@@ -224,20 +229,22 @@ def get_word_frequency():
         return word_freq
 
 
-def get_normalized_frequency(word):
+def get_normalized_inverse_frequency(word):
     max = 153141437 # the 153141437, the max frequency
     freq = get_word_frequency().get(word, 0)
     return 1.0 - np.log(1 + freq) / np.log(1 + max)
 
 
-def get_complexity_score(sentence):
+def get_complexity_score(sentence, operation_type = None):
     words = tokenize(remove_stopwords(remove_punctuation(sentence)))
     #words = tokenize(remove_punctuation(sentence))
     words = [word for word in words if word in get_word2rank()]  # remove unknown words
     if len(words) == 0:
         return 1.0
-    
-    return np.array([get_normalized_frequency(word.lower()) for word in words]).mean()
+    if operation_type == 'mean':
+        return np.array([get_normalized_inverse_frequency(word.lower()) for word in words]).mean()
+    else:
+        return np.array([get_normalized_inverse_frequency(word.lower()) for word in words]).max()
 
 
 
@@ -265,7 +272,7 @@ class RatioFeature:
         if not name: name = class_name
         return name
 
-
+### tokens features ###
 class WordRatioFeature(RatioFeature):
     def __init__(self, *args, **kwargs):
         super().__init__(self.get_word_length_ratio, *args, **kwargs)
@@ -307,6 +314,7 @@ class WordRankRatioFeature(RatioFeature):
 
     
     def get_rank(self, word):
+        # return get_normalized_inverse_frequency(word)
         rank = get_word2rank().get(word, len(get_word2rank()))
         return np.log(1 + rank)
 
@@ -480,9 +488,8 @@ if __name__ == '__main__':
         'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
     }
 
-    # features_kwargs = {}
-    #preprocessor = Preprocessor(features_kwargs)
     preprocessor = load_preprocessor()
-    dataset = EPFL_EN
+    ### processed dataset
+    dataset = EPFL_NEWS_EN
     print(preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex'))
     # preprocessor.preprocess_dataset(WIKI_DATASET)

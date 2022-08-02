@@ -1,19 +1,21 @@
+'''
+Main Program: 
+> python main.py
+'''
 # -- fix path --
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 import torch
-from preprocessor import TURKCORPUS_DATASET, EXP_DIR, Preprocessor, EPFL_DATASET, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_EN
+from preprocessor import TURKCORPUS_DATASET, EXP_DIR, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
 import time
 import json
 from contextlib import contextmanager
 from Ts_T5 import train
-from sum_T5 import train_summary
 import optuna
 import argparse
 from Ts_T5 import T5FineTuner
-from sum_T5 import T5FineTuner_summary
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -36,9 +38,7 @@ def parse_arguments():
     'WordRankRatioFeature': {'target_ratio': 0.8},
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
 })
-    ### change the model
     p = T5FineTuner.add_model_specific_args(p)
-    #p = T5FineTuner_summary.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
     return args
@@ -51,7 +51,7 @@ def parse_arguments():
 #   def on_validation_end(self, trainer, pl_module):
 #       self.metrics.append(trainer.callback_metrics)
 
-
+# Create experiment directory
 def get_experiment_dir(create_dir=False):
     dir_name = f'{int(time.time() * 1000000)}'
     path = EXP_DIR / f'exp_{dir_name}'
@@ -108,31 +108,27 @@ def log_stdout(filepath, mute_stdout=False):
 def run_training(args, dataset):
 
     args.output_dir = get_experiment_dir(create_dir=True)
+    # logging the args
     log_params(args.output_dir / "params.json", vars(args))
 
     # if without tokens, delete it
     preprocessor = Preprocessor(args.features_kwargs)
     preprocessor.preprocess_dataset(dataset)
-    ###########
+    # dataset 
     args.dataset = dataset
     print("Dataset: ",args.dataset)
-    with log_stdout(args.output_dir / "logs.txt"):
-        #train_summary(args)
-        train(args)
+    train(args)
 
-dataset = WIKILARGE_FILTER_DATASET
+    #### add logging process if you want
+    # with log_stdout(args.output_dir / "logs.txt"):
+    #     #train_summary(args)
+    #     train(args)
 
-# features_kwargs = {
-#     # 'WordRatioFeature': {'target_ratio': 0.8},
-#     'CharRatioFeature': {'target_ratio': 0.8},
-#     'LevenshteinRatioFeature': {'target_ratio': 0.8},
-#     'WordRankRatioFeature': {'target_ratio': 0.8},
-#     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
-# }
-# args_dict['features_kwargs'] = features_kwargs
+dataset = WIKI_PARA_DATASET
 
 args = parse_arguments()
 run_training(args, dataset)
+
 ##########################
 ### fine-tuning
 # dataset = EPFL_DATASET
