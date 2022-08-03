@@ -21,18 +21,18 @@ with Path(filepath).open('r') as f1, Path(targetpath).open('r') as f2:
     complex_sents = np.array(complex_sents)
     simple_sents = np.array(simple_sents)
 
-    x_val, x_test, y_val, y_test = train_test_split(complex_sents, simple_sents, test_size=0.02, random_state=42)
+    x_val, x_test, y_val, y_test = train_test_split(complex_sents, simple_sents, test_size=0.03, random_state=42)
 
     #### save to file using pandas in txt format
-    x_val = pd.DataFrame(x_val)
+    #x_val = pd.DataFrame(x_val)
     x_test = pd.DataFrame(x_test)
-    y_val = pd.DataFrame(y_val)
+    #y_val = pd.DataFrame(y_val)
     y_test = pd.DataFrame(y_test)
 
-    x_val.to_csv(get_data_filepath(WIKI_DOC, 'val', 'complex'),sep = '\t', index=False, header=False, encoding='utf-8')
-    x_test.to_csv(get_data_filepath(WIKI_DOC, 'test', 'complex'),sep = '\t', index=False, header=False, encoding='utf-8')
-    y_val.to_csv(get_data_filepath(WIKI_DOC, 'val', 'simple'),sep = '\t', index=False, header=False, encoding='utf-8')
-    y_test.to_csv(get_data_filepath(WIKI_DOC, 'test', 'simple'),sep = '\t', index=False, header=False, encoding='utf-8')
+    #x_val.to_csv(get_data_filepath(WIKI_DOC, 'val', 'complex'),sep = '\t', index=False, header=False, encoding='utf-8')
+    x_test.to_csv(get_data_filepath(WIKI_DOC, 'valid_small', 'complex'),sep = '\t', index=False, header=False, encoding='utf-8')
+    #y_val.to_csv(get_data_filepath(WIKI_DOC, 'val', 'simple'),sep = '\t', index=False, header=False, encoding='utf-8')
+    y_test.to_csv(get_data_filepath(WIKI_DOC, 'valid_small', 'simple'),sep = '\t', index=False, header=False, encoding='utf-8')
     
 
 

@@ -46,6 +46,7 @@ WIKILARGE_FILTER_DATASET = 'wikilargeF'
 WIKI_PARAGH_FILTER_DATASET = 'wiki_paraghF'
 EPFL_NEWS_EN = 'epfl_news_en'
 WIKI_DOC = 'wiki_doc'
+WIKI_DOC_Small = 'wiki_doc_small'
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"
 WORD_FREQUENCY_FILEPATH = RESOURCES_DIR /'enwiki-words-frequency.txt'

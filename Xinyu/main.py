@@ -8,19 +8,19 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 import torch
-from preprocessor import TURKCORPUS_DATASET, EXP_DIR, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
+from preprocessor import TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
 import time
 import json
 from contextlib import contextmanager
-from Ts_T5 import train
+#from Ts_T5 import train
 import optuna
 import argparse
-from Ts_T5 import T5FineTuner
+#from Ts_T5 import T5FineTuner
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from optuna.integration import PyTorchLightningPruningCallback
-
+from new_model import SumSim, train
 
 
 
@@ -38,7 +38,7 @@ def parse_arguments():
     'WordRankRatioFeature': {'target_ratio': 0.8},
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
 })
-    p = T5FineTuner.add_model_specific_args(p)
+    p = SumSim.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
     return args
@@ -124,7 +124,7 @@ def run_training(args, dataset):
     #     #train_summary(args)
     #     train(args)
 
-dataset = WIKI_PARA_DATASET
+dataset = WIKI_DOC_Small
 
 args = parse_arguments()
 run_training(args, dataset)

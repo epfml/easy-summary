@@ -439,31 +439,31 @@ def evaluate_on_WIKIDOC(features_kwargs, phase, ratio=None, model_dirname = None
 # Specify the token features to use
 features_kwargs = {
     # 'WordRatioFeature': {'target_ratio': 1.05},
-    'CharRatioFeature': {'target_ratio': 0.94},
-    'LevenshteinRatioFeature': {'target_ratio': 0.67},
-    'WordRankRatioFeature': {'target_ratio': 0.74},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.76}
+    'CharRatioFeature': {'target_ratio': 0.93},
+    'LevenshteinRatioFeature': {'target_ratio': 0.62},
+    'WordRankRatioFeature': {'target_ratio': 0.68},
+    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.72}
 }
 
 ####### WIKI_DOC #######
 evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
-                    phase='test', ratio = 0.9,
+                    phase='test', ratio = 0.7,
                     model_dirname=model_dirname)
 #### wikiparagh oldloss ####
 # original doc
 # C: 0.95         L: 0.68         WR: 0.82        DTD: 0.79       SARI: 39.24      BLEU: 8.90      FKGL: 10.03 
 
 # doc 0.1 summarization
-# 
+# C: 0.94         L: 0.61         WR: 0.79        DTD: 0.72       SARI: 36.48      BLEU: 6.88      FKGL: 8.88
 
 # doc 0.3 summarization
-# C: 0.94         L: 0.61         WR: 0.79        DTD: 0.72       SARI: 37.40      BLEU: 7.88      FKGL: 9.45 
+# C: 0.94         L: 0.61         WR: 0.79        DTD: 0.72       SARI: 38.37      BLEU: 8.25      FKGL: 8.45 
 
 # doc 0.5 summarization
-# C: 0.95         L: 0.62         WR: 0.67        DTD: 0.72       SARI: 38.59      BLEU: 8.27      FKGL: 9.06
+# C: 0.95         L: 0.62         WR: 0.67        DTD: 0.72       SARI: 38.79      BLEU: 8.62      FKGL: 8.54
 
 # doc 0.7 summarization
-# C: 0.93         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.12      BLEU: 8.21      FKGL: 9.17  
+# C: 0.93         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.55      BLEU: 9.60      FKGL: 8.38 
 
 # doc 0.9 summarization
 # C: 0.94         L: 0.67         WR: 0.74        DTD: 0.76       SARI: 39.74      BLEU: 10.63     FKGL: 8.60 
