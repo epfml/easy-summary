@@ -124,7 +124,7 @@ def run_training(args, dataset):
     #     #train_summary(args)
     #     train(args)
 
-dataset = WIKI_DOC_Small
+dataset = WIKI_PARAGH_FILTER_DATASET
 
 args = parse_arguments()
 run_training(args, dataset)

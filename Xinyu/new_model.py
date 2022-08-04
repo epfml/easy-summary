@@ -35,6 +35,7 @@ from transformers import (
     T5TokenizerFast,
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
+from Ts_T5 import T5FineTuner
 
 BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
@@ -57,13 +58,13 @@ class Sum(pl.LightningModule):
         return self.summarizer(X, ratio=ratio)
 
 class Sim(pl.LightningModule):
-    def __init__(self, device):
-        super().__init__()
+    def __init__(self):
+        super(Sim,self).__init__()
+        device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.save_hyperparameters()
-        self.device  = device
         self.simplifier = T5ForConditionalGeneration.from_pretrained('t5-base')
         self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
-        self.simplifier = self.simplifier.to(self.device)
+        self.simplifier = self.simplifier.to(device)
     
     def forward(self, input_ids, attention_mask = None, 
                 decoder_input_ids = None,
@@ -80,15 +81,16 @@ class Sim(pl.LightningModule):
 
 
 class SumSim(pl.LightningModule):
-    def __init__(self,args, ratio, Sum, Sim):
+    def __init__(self,args, ratio):
         super(SumSim, self).__init__()
         self.args = args
         self.ratio = ratio
         self.save_hyperparameters()
-        self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
+        #self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
         # Load pre-trained model and tokenizer
-        self.summarizer = Sum
-        self.simplifier = Sim
+        self.summarizer = Summarizer(model='distilbert-base-uncased')
+        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        #.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
 
         self.preprocessor = load_preprocessor()
         # set custom loss TRUE or FALSE
@@ -257,17 +259,15 @@ class SumSim(pl.LightningModule):
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in model1.named_parameters() if not any(nd in n for nd in no_decay)] +
-                          [p for n, p in model2.named_parameters() if not any(nd in n for nd in no_decay)],
+                "params": [p for n, p in model2.named_parameters() if not any(nd in n for nd in no_decay)],
                                 "weight_decay": self.args.weight_decay,
             },
             {
-                "params": [p for n, p in model1.named_parameters() if any(nd in n for nd in no_decay)] +
-                          [p for n, p in model2.named_parameters() if any(nd in n for nd in no_decay)],
+                "params": [p for n, p in model2.named_parameters() if any(nd in n for nd in no_decay)],
                 "weight_decay": 0.0,
             },
         ]
-        optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
+        optimizer = AdamW(optimizer_grouped_parameters + list(model1.params()), lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         self.opt = optimizer
         return [optimizer]
 
@@ -502,9 +502,7 @@ def train(args):
     print("Initialize model")
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model1 = Sum()
-    model2 = Sim(device).load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
-    model = SumSim(args, 0.7, model1, model2)
+    model = SumSim(args, 0.7)
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)
