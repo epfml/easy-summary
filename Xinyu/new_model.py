@@ -85,10 +85,10 @@ class SumSim(pl.LightningModule):
         self.args = args
         self.ratio = ratio
         self.save_hyperparameters()
-        self.self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
+        self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
         # Load pre-trained model and tokenizer
-        self.summarizer = Sum()
-        self.simplifier = Sim(self.args.device).load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.summarizer = Sum
+        self.simplifier = Sim
 
         self.preprocessor = load_preprocessor()
         # set custom loss TRUE or FALSE
@@ -503,7 +503,7 @@ def train(args):
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model1 = Sum()
-    model2 = Sim(device)
+    model2 = Sim(device).load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
     model = SumSim(args, 0.7, model1, model2)
     model.args.dataset = args.dataset
     print(model.args.dataset)
