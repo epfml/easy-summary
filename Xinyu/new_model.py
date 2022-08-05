@@ -33,7 +33,7 @@ from transformers import (
     AdamW,
     T5ForConditionalGeneration,
     T5TokenizerFast,
-    BartForConditionalGeneration, BartTokenizer,pipeline,
+    BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
 from Ts_T5 import T5FineTuner
@@ -57,8 +57,9 @@ class SumSim(pl.LightningModule):
         self.save_hyperparameters()
         #self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
         # Load pre-trained model and tokenizer
+        #self.summarizer = BartModel.from_pretrained("facebook/bart-large-cnn")
         self.summarizer = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
-        self.summarizer_tokenizer = BartTokenizer.from_pretrained("facebook/bart-large-cnn")
+        self.summarizer_tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-large-cnn")
         self.summarizer = self.summarizer.to(self.args.device)
 
         self.simplifier = T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
@@ -74,29 +75,52 @@ class SumSim(pl.LightningModule):
     def is_logger(self):
         return self.trainer.global_rank <= 0
 
-    def forward(self, source, decoder_attention_mask = None, labels = None):
+    def forward(self, input_ids, 
+    attention_mask = None,
+    decoder_input_ids = None,
+    decoder_attention_mask = None, labels = None):
+        
+        outputs = self.simplifier(
+            input_ids = input_ids,
+            attention_mask = attention_mask,
+            decoder_input_ids = decoder_input_ids,
+            decoder_attention_mask =  decoder_attention_mask,
+            labels = labels
+        )
+
+        return outputs
+
+
+    def training_step(self, batch, batch_idx):
+        source = batch["source"]
+        labels = batch['target_ids']
+        labels[labels[:,:] == self.simplifier_tokenizer.pad_token_id] = -100
+        # zero the gradient buffers of all parameters
+        self.opt.zero_grad()
+        #print(source, len(source))
         ## summarizer stage
         inputs = self.summarizer_tokenizer(
             source,
-            max_length = 512,
+            max_length = 256,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
-        )
+        ).to(self.args.device)
         # generate summary
         summary_ids = self.summarizer.generate(
-            inputs['input_ids'].squeeze().to(self.args.device),
+            inputs['input_ids'].to(self.args.device),
             num_beams = 10,
-            min_length = 30,
+            min_length = 10,
             max_length = 256
         ).to(self.args.device)
 
         summarization = self.summarizer_tokenizer.batch_decode(
-            summary_ids.to(self.args.device),
+            summary_ids,
             skip_special_tokens = True,
-            clean_up_tokenization_spaces = False
+            clean_up_tokenization_spaces = True
         )[0]
 
+        print(summarization)
         ## simplifier stage
         tokenized_inputs = self.simplifier_tokenizer(
             summarization,
@@ -110,29 +134,17 @@ class SumSim(pl.LightningModule):
         source_ids = tokenized_inputs["input_ids"].to(self.args.device)
         src_mask = tokenized_inputs["attention_mask"].to(self.args.device)
 
-        print(source_ids.shape)
-        outputs = self.simplifier(
-            input_ids=source_ids,
-            attention_mask=src_mask,
-            labels = labels,
-            decoder_attention_mask = decoder_attention_mask
-        )
-        return outputs
-
-
-    def training_step(self, batch, batch_idx):
-        source = batch["source"]
-        labels = batch['target_ids']
-        labels[labels[:,:] == self.simplifier_tokenizer.pad_token_id] = -100
-        # zero the gradient buffers of all parameters
-        self.opt.zero_grad()
+        print(source_ids.shape, src_mask.shape)
+        
 
         # forward pass
         outputs  = self(
-            source, 
-            decoder_attention_mask = batch['target_mask'],
-            labels = labels
+            input_ids = source_ids,
+            attention_mask = src_mask,
+            labels = labels,
+            decoder_attention_mask = batch['target_mask']
         )
+
         if self.args.custom_loss:
             '''
             Custom Loss:
@@ -197,7 +209,7 @@ class SumSim(pl.LightningModule):
             # summarize the document
             inputs = self.summarizer_tokenizer(
             [text],
-            max_length = 512,
+            max_length = 256,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -335,8 +347,8 @@ class SumSim(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-m','--model_name', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
       p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)

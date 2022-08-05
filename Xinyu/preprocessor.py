@@ -47,6 +47,7 @@ WIKI_PARAGH_FILTER_DATASET = 'wiki_paraghF'
 EPFL_NEWS_EN = 'epfl_news_en'
 WIKI_DOC = 'wiki_doc'
 WIKI_DOC_Small = 'wiki_doc_small'
+WIKI_PARAGH_SMALL = 'wiki_paragh_small'
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"
 WORD_FREQUENCY_FILEPATH = RESOURCES_DIR /'enwiki-words-frequency.txt'
@@ -344,13 +345,11 @@ class DependencyTreeDepthRatioFeature(RatioFeature):
     def spacy_process(self, text):
         return get_spacy_model()(text)
 
-
 class Preprocessor:
     def __init__(self, features_kwargs=None):
         super().__init__()
 
         self.features = self.get_features(features_kwargs)
-        #print(self.features)
         if features_kwargs:
             self.hash = generate_hash(str(features_kwargs).encode())
         else:
@@ -380,13 +379,12 @@ class Preprocessor:
         if self.features:
             line = ''
             for feature in self.features:
+                # startTime = timeit.default_timer()
+                # print(feature)
                 processed_complex, _ = feature.encode_sentence_pair(complex_sentence, simple_sentence)
                 line += processed_complex + ' '
+                # print(feature, timeit.default_timer() - startTime)
             line += ' ' + complex_sentence
-            # swapped_sent = swap_opeartion_random(complex_sentence,simple_sentence)
-            # #print(swapped_sent)
-            # if swapped_sent:
-            #     line += ' [SEP] ' + swapped_sent
             return line.rstrip()
 
         else:
@@ -397,15 +395,15 @@ class Preprocessor:
             decoded_sentence = feature.decode_sentence(encoded_sentence)
         return decoded_sentence
 
-    # def encode_file(self, input_filepath, output_filepath):
-    #     with open(output_filepath, 'w') as f:
-    #         for line in yield_lines(input_filepath):
-    #             f.write(self.encode_sentence(line) + '\n')
+    def encode_file(self, input_filepath, output_filepath):
+        with open(output_filepath, 'w') as f:
+            for line in yield_lines(input_filepath):
+                f.write(self.encode_sentence(line) + '\n')
 
-    # def decode_file(self, input_filepath, output_filepath):
-    #     with open(output_filepath, 'w') as f:
-    #         for line in yield_lines(input_filepath):
-    #             f.write(self.decode_sentence(line) + '\n')
+    def decode_file(self, input_filepath, output_filepath):
+        with open(output_filepath, 'w') as f:
+            for line in yield_lines(input_filepath):
+                f.write(self.decode_sentence(line) + '\n')
 
     def process_encode_sentence_pair(self, sentences):
         print(f"{sentences[2]}/{self.line_count}", sentences[0])  # sentence[0] index
@@ -416,37 +414,46 @@ class Preprocessor:
         complex_sent, simple_sent, queue = args
         queue.put(1)
         return self.encode_sentence_pair(complex_sent, simple_sent)
+
     
     def encode_file_pair(self, complex_filepath, simple_filepath):
         # print(f"Preprocessing file: {complex_filepath}")
         processed_complex_sentences = []
         self.line_count = count_line(simple_filepath)
 
-        nb_cores = multiprocessing.cpu_count()
-        manager = multiprocessing.Manager()
-        queue = manager.Queue()
+        # nb_cores = multiprocessing.cpu_count()
+        # manager = multiprocessing.Manager()
+        # queue = manager.Queue()
 
-        pool = Pool(processes=nb_cores)
-        args = [(complex_sent, simple_sent, queue) for complex_sent, simple_sent in
-                yield_sentence_pair(complex_filepath, simple_filepath)]
-        res = pool.map_async(self.pool_encode_sentence_pair, args)
-        while not res.ready():
-            # remaining = res._number_left * res._chunksize
-            size = queue.qsize()
-            print(f"Preprocessing: {size} / {self.line_count}")
-            time.sleep(0.5)
-        encoded_sentences = res.get()
-        pool.close()
-        pool.join()
+        # pool = Pool(processes=nb_cores)
+        # args = [(complex_sent, simple_sent, queue) for complex_sent, simple_sent in
+        #         yield_sentence_pair(complex_filepath, simple_filepath)]
+        # res = pool.map_async(self.pool_encode_sentence_pair, args)
+        # cnt=0
+        # while not res.ready():
+        #     # remaining = res._number_left * res._chunksize
+        #     size = queue.qsize()
+        #     print(f"Preprocessing: {size} / {self.line_count}")
+        #     cnt+=1
+        #     if cnt>=30:
+        #         break
+        #     #time.sleep(0.5)
+        # encoded_sentences = res.get()
+        # pool.close()
+        # pool.join()
+        # pool.terminate()
+        i = 0
+        for complex_sentence, simple_sentence in yield_sentence_pair(complex_filepath, simple_filepath):
+        # print(complex_sentence)
+            processed_complex_sentence = self.encode_sentence_pair(complex_sentence, simple_sentence)
+            i +=1
+            print(f"{i}/{self.line_count}", processed_complex_sentence)
+            processed_complex_sentences.append(processed_complex_sentence)
 
-        return encoded_sentences
+        return processed_complex_sentences
 
-    def get_preprocessed_filepath(self, dataset, phase, type,i = None):
-        suffix = ''
-        if i is not None:
-            suffix = f'.{i}'
-        filename = f'{dataset}.{phase}.{type}{suffix}'
-        #filename = f'{dataset}.{phase}.{type}'
+    def get_preprocessed_filepath(self, dataset, phase, type):
+        filename = f'{dataset}.{phase}.{type}'
         return self.preprocessed_data_dir / filename
 
     def preprocess_dataset(self, dataset):
@@ -458,12 +465,8 @@ class Preprocessor:
 
         for phase in PHASES:
             # for phase in ["valid", "test"]:
-            # if (phase=='train'):
-            #     continue
             complex_filepath = get_data_filepath(dataset, phase, 'complex')
             simple_filepath = get_data_filepath(dataset, phase, 'simple')
-            print(complex_filepath)
-            print(simple_filepath)
 
             complex_output_filepath = self.preprocessed_data_dir / complex_filepath.name
             simple_output_filepath = self.preprocessed_data_dir / simple_filepath.name
@@ -478,7 +481,6 @@ class Preprocessor:
 
         print(f'Preprocessing dataset "{dataset}" is finished.')
         return self.preprocessed_data_dir
-
 
 if __name__ == '__main__':
     features_kwargs = {
