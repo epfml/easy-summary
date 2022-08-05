@@ -12,7 +12,7 @@ from preprocessor import TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMAL
 import time
 import json
 from contextlib import contextmanager
-from Ts_T5 import train
+#from Ts_T5 import train
 import optuna
 import argparse
 from Ts_T5 import T5FineTuner
@@ -20,7 +20,7 @@ from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from optuna.integration import PyTorchLightningPruningCallback
-#from new_model import SumSim, train
+from new_model import SumSim, train
 
 
 
@@ -125,7 +125,7 @@ def run_training(args, dataset):
     #     #train_summary(args)
     #     train(args)
 
-dataset = WIKI_PARAGH_SMALL
+dataset = WIKI_DOC_Small
 
 args = parse_arguments()
 run_training(args, dataset)

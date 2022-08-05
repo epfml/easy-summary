@@ -38,7 +38,7 @@ from transformers import (
 )
 from Ts_T5 import T5FineTuner
 
-BERT_Sum = Summarizer(model='distilbert-base-uncased')
+#BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
 class MetricsCallback(pl.Callback):
   def __init__(self):
@@ -133,8 +133,6 @@ class SumSim(pl.LightningModule):
         
         source_ids = tokenized_inputs["input_ids"].to(self.args.device)
         src_mask = tokenized_inputs["attention_mask"].to(self.args.device)
-
-        print(source_ids.shape, src_mask.shape)
         
 
         # forward pass
