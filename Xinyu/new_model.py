@@ -196,7 +196,7 @@ class SumSim(pl.LightningModule):
         print("Val_loss", loss)
         logs = {"val_loss": loss}
 
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, batch_size = self.args.valid_batch_size)
         return torch.tensor(loss, dtype=float)
 
     def sari_validation_step(self, batch):
@@ -239,7 +239,7 @@ class SumSim(pl.LightningModule):
             attention_masks = encoding["attention_mask"].to(self.device)
 
             # set top_k = 130 and set top_p = 0.95 and num_return_sequences = 1
-            beam_outputs = self.simplifier.generate(
+            beam_outputs = self.simplifier.model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_masks,
                 do_sample=True,
@@ -252,7 +252,7 @@ class SumSim(pl.LightningModule):
             ).to(self.device)
             # final_outputs = []
             # for beam_output in beam_outputs:
-            sent = self.tokenizer.decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+            sent = self.simplifier_tokenizer.decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
             # if sent.lower() != sentence.lower() and sent not in final_outputs:
                 # final_outputs.append(sent)
             
@@ -264,10 +264,10 @@ class SumSim(pl.LightningModule):
             pred_sents.append(pred_sent)
 
         ### WIKI-large ###
-        # score = corpus_sari(batch["source"], pred_sents, [batch["targets"]])
+        score = corpus_sari(batch["source"], pred_sents, [batch["targets"]])
 
         ### turkcorpuse ###
-        score = corpus_sari(batch["source"], pred_sents, batch["targets"])
+        #score = corpus_sari(batch["source"], pred_sents, batch["targets"])
 
         print("Sari score: ", score)
 
@@ -530,7 +530,7 @@ def train(args):
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SumSim(args).to(device)
-    model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
+    #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

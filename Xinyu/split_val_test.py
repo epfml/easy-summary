@@ -7,12 +7,12 @@ import numpy as np
 import random
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from preprocessor import RESOURCES_DIR, WIKI_PARA_DATASET, get_data_filepath, WIKI_DOC, WIKI_PARAGH_SMALL, DATASETS_DIR, WIKI_DOC_Small
+from preprocessor import RESOURCES_DIR, WIKI_DOC_Small, WIKI_PARA_DATASET, get_data_filepath, WIKI_DOC, WIKI_PARAGH_SMALL, DATASETS_DIR, WIKI_DOC_Small
 
 
 
-filepath = get_data_filepath(WIKI_PARA_DATASET, 'valid', 'complex')
-targetpath = get_data_filepath(WIKI_PARA_DATASET, 'valid','simple')
+filepath = get_data_filepath(WIKI_DOC, 'train', 'complex')
+targetpath = get_data_filepath(WIKI_DOC, 'train','simple')
 
 with Path(filepath).open('r') as f1, Path(targetpath).open('r') as f2:
     complex_sents = f1.read().split('\n')
@@ -30,9 +30,9 @@ with Path(filepath).open('r') as f1, Path(targetpath).open('r') as f2:
     y_test = pd.DataFrame(y_test)
 
     #x_val.to_csv(get_data_filepath(WIKI_DOC, 'val', 'complex'),sep = '\t', index=False, header=False, encoding='utf-8')
-    x_test.to_csv(get_data_filepath(WIKI_PARAGH_SMALL, 'valid', 'complex'),sep = '\t', index=False, header=False, encoding='utf-8')
+    x_test.to_csv(get_data_filepath(WIKI_DOC_Small, 'train', 'complex'),sep = '\t', index=False, header=False, encoding='utf-8')
     #y_val.to_csv(get_data_filepath(WIKI_DOC, 'val', 'simple'),sep = '\t', index=False, header=False, encoding='utf-8')
-    y_test.to_csv(get_data_filepath(WIKI_PARAGH_SMALL, 'valid', 'simple'),sep = '\t', index=False, header=False, encoding='utf-8')
+    y_test.to_csv(get_data_filepath(WIKI_DOC_Small, 'train', 'simple'),sep = '\t', index=False, header=False, encoding='utf-8')
     
 
 
