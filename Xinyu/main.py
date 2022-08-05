@@ -38,8 +38,8 @@ def parse_arguments():
     'WordRankRatioFeature': {'target_ratio': 0.8},
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
 })
-    p = T5FineTuner.add_model_specific_args(p)
-    #p = SumSim.add_model_specific_args(p)
+    #p = T5FineTuner.add_model_specific_args(p)
+    p = SumSim.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
     return args
@@ -113,8 +113,8 @@ def run_training(args, dataset):
     log_params(args.output_dir / "params.json", vars(args))
 
     # if without tokens, delete it
-    preprocessor = Preprocessor(args.features_kwargs)
-    preprocessor.preprocess_dataset(dataset)
+    # preprocessor = Preprocessor(args.features_kwargs)
+    # preprocessor.preprocess_dataset(dataset)
     # dataset 
     args.dataset = dataset
     print("Dataset: ",args.dataset)

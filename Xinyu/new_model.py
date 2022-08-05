@@ -62,8 +62,9 @@ class SumSim(pl.LightningModule):
         self.summarizer_tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-large-cnn")
         self.summarizer = self.summarizer.to(self.args.device)
 
-        self.simplifier = T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
-        #.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
+        
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
         self.preprocessor = load_preprocessor()
         # set custom loss TRUE or FALSE
@@ -120,8 +121,7 @@ class SumSim(pl.LightningModule):
             clean_up_tokenization_spaces = True
         )[0]
 
-        print(summarization)
-        ## simplifier stage
+        #print(summarization)
         tokenized_inputs = self.simplifier_tokenizer(
             summarization,
             truncation = True,
@@ -239,7 +239,7 @@ class SumSim(pl.LightningModule):
             attention_masks = encoding["attention_mask"].to(self.device)
 
             # set top_k = 130 and set top_p = 0.95 and num_return_sequences = 1
-            beam_outputs = self.model.generate(
+            beam_outputs = self.simplifier.generate(
                 input_ids=input_ids,
                 attention_mask=attention_masks,
                 do_sample=True,
@@ -398,11 +398,12 @@ class TrainDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=256, sample_size=1):
         self.sample_size = sample_size
         print("init TrainDataset ...")
-        # self.source_filepath = get_data_filepath(dataset,'train','complex')
-        # self.target_filepath = get_data_filepath(dataset,'train','simple')
-        preprocessor = load_preprocessor()
-        self.source_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex')
-        self.target_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'simple')
+        self.source_filepath = get_data_filepath(dataset,'train','complex')
+        self.target_filepath = get_data_filepath(dataset,'train','simple')
+        print("Initialized dataset done.....")
+        # preprocessor = load_preprocessor()
+        # self.source_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex')
+        # self.target_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'simple')
 
         self.max_len = max_len
         self.tokenizer = tokenizer
@@ -529,7 +530,7 @@ def train(args):
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SumSim(args).to(device)
-    #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
+    model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)
