@@ -150,31 +150,31 @@ class SumSim(pl.LightningModule):
 
         ### add special tokens
         # Key_word
-        # key_word = 'simplify: '
-        # res = []
+        key_word = 'simplify: '
+        res = []
         # print(len(batch['target']))
-        # for src, tgt in zip(summarization, batch['target']):
-        #     # word rank ratio
-        #     print(src)
-        #     print(tgt)
-        #     WR = "WR_"+str(word_rank_ratio(src, tgt))
-        #     print(WR)
-        #     # char ratio
-        #     C = "C_"+str(char_ratio(src, tgt))
-        #     print(C)
-        #     # Lev Sim
-        #     L = "L_"+str(LevSim(src, tgt))
-        #     print(L)
+        for src, tgt in zip(summarization, batch['target']):
+            # word rank ratio
+            print(src)
+            print(tgt)
+            WR = "WR_"+str(word_rank_ratio(src, tgt))
+            print(WR)
+            # char ratio
+            C = "C_"+str(char_ratio(src, tgt))
+            print(C)
+            # Lev Sim
+            L = "L_"+str(LevSim(src, tgt))
+            print(L)
 
-        #     res.append(key_word + C+L+WR+src)
+            res.append(key_word + C+L+WR+src)
         
-        # print(res)
+        #print(res)
         
 
 
         #print(summarization)
         tokenized_inputs = self.simplifier_tokenizer(
-            summarization,
+            res,
             truncation = True,
             max_length = 256,
             padding = 'max_length',
