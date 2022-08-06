@@ -4,6 +4,7 @@ sum_sim model
 
 from functools import lru_cache
 from gc import callbacks
+from lib2to3.pgen2 import token
 from pathlib import Path
 from weakref import ref
 import math
@@ -11,7 +12,8 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from easse.sari import corpus_sari
 from torch.nn import functional as F
 from preprocessor import tokenize, yield_sentence_pair, yield_lines, load_preprocessor, read_lines, \
-    count_line, OUTPUT_DIR, get_complexity_score
+    count_line, OUTPUT_DIR, get_complexity_score, safe_division, get_word2rank, remove_stopwords, remove_punctuation
+import Levenshtein
 import argparse
 from argparse import ArgumentParser
 import os
@@ -48,7 +50,31 @@ class MetricsCallback(pl.Callback):
   def on_validation_end(self, trainer, pl_module):
       self.metrics.append(trainer.callback_metrics)
 
+### Special tokens
+def char_ratio(complex_sentence, simple_sentence):
+    return round(safe_division(len(simple_sentence), len(complex_sentence)))
 
+
+def LevSim(complex_sentence, simple_sentence):
+    return round(Levenshtein.ratio(complex_sentence, simple_sentence))
+
+def word_rank_ratio(complex_sentence, simple_sentence):
+    def get_rank(word):
+        rank = get_word2rank().get(word, len(get_word2rank()))
+        return np.log(1+rank)
+    
+    def get_lexical_complexity_score(sentence):
+        words = tokenize(remove_stopwords(remove_punctuation(sentence)))
+        words = [word for word in words if word in get_word2rank()]
+        if len(words)==0:
+            return np.log(1+len(get_word2rank()))
+        return np.quantile([get_rank(word) for word in words], 0.75)
+    
+    return round(min(safe_division(
+        get_lexical_complexity_score(simple_sentence),
+        get_lexical_complexity_score(complex_sentence)
+    ), 2))
+### Speicial tokens end
 
 class SumSim(pl.LightningModule):
     def __init__(self,args):
@@ -119,7 +145,32 @@ class SumSim(pl.LightningModule):
             summary_ids,
             skip_special_tokens = True,
             clean_up_tokenization_spaces = True
-        )[0]
+        )
+        
+
+        ### add special tokens
+        # Key_word
+        # key_word = 'simplify: '
+        # res = []
+        # print(len(batch['target']))
+        # for src, tgt in zip(summarization, batch['target']):
+        #     # word rank ratio
+        #     print(src)
+        #     print(tgt)
+        #     WR = "WR_"+str(word_rank_ratio(src, tgt))
+        #     print(WR)
+        #     # char ratio
+        #     C = "C_"+str(char_ratio(src, tgt))
+        #     print(C)
+        #     # Lev Sim
+        #     L = "L_"+str(LevSim(src, tgt))
+        #     print(L)
+
+        #     res.append(key_word + C+L+WR+src)
+        
+        # print(res)
+        
+
 
         #print(summarization)
         tokenized_inputs = self.simplifier_tokenizer(
@@ -225,6 +276,7 @@ class SumSim(pl.LightningModule):
                 skip_special_tokens = True,
                 clean_up_tokenization_spaces = False
             )[0]
+
 
             # simplify the document
             encoding = self.simplifier_tokenizer(
