@@ -88,7 +88,8 @@ class SumSim(pl.LightningModule):
         self.summarizer_tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-large-cnn")
         self.summarizer = self.summarizer.to(self.args.device)
 
-        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        #self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.simplifier = T5FineTuner(args)
         #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
         
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
@@ -96,7 +97,7 @@ class SumSim(pl.LightningModule):
         # set custom loss TRUE or FALSE
         self.args.custom_loss = True
 #        self.args.learning_rate = 1e-4
-        self.args.num_train_epochs = 5
+        self.args.num_train_epochs = 8
 
 
     def is_logger(self):
@@ -148,33 +149,23 @@ class SumSim(pl.LightningModule):
         )
         
 
-        ### add special tokens
+        ### add simplify after summarizing not at original doc
         # Key_word
         key_word = 'simplify: '
         res = []
         # print(len(batch['target']))
-        for src, tgt in zip(summarization, batch['target']):
-            # word rank ratio
-            print(src)
-            print(tgt)
-            WR = "WR_"+str(word_rank_ratio(src, tgt))
-            print(WR)
-            # char ratio
-            C = "C_"+str(char_ratio(src, tgt))
-            print(C)
-            # Lev Sim
-            L = "L_"+str(LevSim(src, tgt))
-            print(L)
-
-            res.append(key_word + C+L+WR+src)
+        for src in summarization:
+            src = key_word + src
+            res.append(src)
         
+        summarization = res
         #print(res)
         
 
 
         #print(summarization)
         tokenized_inputs = self.simplifier_tokenizer(
-            res,
+            summarization,
             truncation = True,
             max_length = 256,
             padding = 'max_length',
@@ -277,6 +268,8 @@ class SumSim(pl.LightningModule):
                 clean_up_tokenization_spaces = False
             )[0]
 
+            ### add after summarizing not at original doc
+            summarization = 'simplify: ' + summarization
 
             # simplify the document
             encoding = self.simplifier_tokenizer(
@@ -470,7 +463,8 @@ class TrainDataset(Dataset):
         return int(len(self.inputs) * self.sample_size)
 
     def __getitem__(self, index):
-        source = "simplify: " + self.inputs[index]
+        source = self.inputs[index]
+        #source = "simplify: " + self.inputs[index]
         target = self.targets[index]
 
         tokenized_inputs = self.tokenizer(
