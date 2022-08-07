@@ -129,7 +129,7 @@ class SumSim(pl.LightningModule):
         ## summarizer stage
         inputs = self.summarizer_tokenizer(
             source,
-            max_length = 256,
+            max_length = 512,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -249,7 +249,7 @@ class SumSim(pl.LightningModule):
             # summarize the document
             inputs = self.summarizer_tokenizer(
             [text],
-            max_length = 256,
+            max_length = 512,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'

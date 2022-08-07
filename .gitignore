@@ -7,6 +7,7 @@ __pycache__/
 *vision_transfer
 *lightning_logs
 *deep-learning-project
+*SumQE
 # C extensions
 *.so
 *resources
