@@ -88,8 +88,8 @@ class SumSim(pl.LightningModule):
         self.summarizer_tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-large-cnn")
         self.summarizer = self.summarizer.to(self.args.device)
 
-        #self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
-        self.simplifier = T5FineTuner(args)
+        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        #self.simplifier = T5FineTuner(args)
         #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
         
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
@@ -97,7 +97,6 @@ class SumSim(pl.LightningModule):
         # set custom loss TRUE or FALSE
         self.args.custom_loss = True
 #        self.args.learning_rate = 1e-4
-        self.args.num_train_epochs = 8
 
 
     def is_logger(self):
@@ -244,8 +243,8 @@ class SumSim(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             sentence = self.preprocessor.encode_sentence(sentence)
-            text = "simplify: " + sentence
-
+            #text = "simplify: " + sentence
+            text = sentence
             # summarize the document
             inputs = self.summarizer_tokenizer(
             [text],
