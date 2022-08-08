@@ -35,6 +35,7 @@ from transformers import (
     AdamW,
     T5ForConditionalGeneration,
     T5TokenizerFast,
+    BertTokenizer, BertForPreTraining,
     BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
@@ -88,6 +89,9 @@ class SumSim(pl.LightningModule):
         self.summarizer_tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-large-cnn")
         self.summarizer = self.summarizer.to(self.args.device)
 
+        # self.comparer = BertForPreTraining.from_pretrained('bert-base-uncased').to(self.args.device)
+        # self.comparer_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+
         self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
         #self.simplifier = T5FineTuner(args)
         #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
@@ -117,6 +121,8 @@ class SumSim(pl.LightningModule):
 
         return outputs
 
+    ### MLO94: 2nd Opt finetuned
+    ### MLO98: 1nd Opt finetuned
 
     def training_step(self, batch, batch_idx):
         source = batch["source"]
@@ -146,18 +152,20 @@ class SumSim(pl.LightningModule):
             skip_special_tokens = True,
             clean_up_tokenization_spaces = True
         )
+
+        ### compare with simple targets
         
 
         ### add simplify after summarizing not at original doc
         # Key_word
-        key_word = 'simplify: '
-        res = []
-        # print(len(batch['target']))
-        for src in summarization:
-            src = key_word + src
-            res.append(src)
+        # key_word = 'simplify: '
+        # res = []
+        # # print(len(batch['target']))
+        # for src in summarization:
+        #     src = key_word + src
+        #     res.append(src)
         
-        summarization = res
+        # summarization = res
         #print(res)
         
 
@@ -242,8 +250,8 @@ class SumSim(pl.LightningModule):
 
     def sari_validation_step(self, batch):
         def generate(sentence):
-            sentence = self.preprocessor.encode_sentence(sentence)
-            #text = "simplify: " + sentence
+            #sentence = self.preprocessor.encode_sentence(sentence)
+            text = "simplify: " + sentence
             text = sentence
             # summarize the document
             inputs = self.summarizer_tokenizer(
@@ -268,7 +276,7 @@ class SumSim(pl.LightningModule):
             )[0]
 
             ### add after summarizing not at original doc
-            summarization = 'simplify: ' + summarization
+            #summarization = 'simplify: ' + summarization
 
             # simplify the document
             encoding = self.simplifier_tokenizer(
@@ -462,8 +470,8 @@ class TrainDataset(Dataset):
         return int(len(self.inputs) * self.sample_size)
 
     def __getitem__(self, index):
-        source = self.inputs[index]
-        #source = "simplify: " + self.inputs[index]
+        #source = self.inputs[index]
+        source = "simplify: " + self.inputs[index]
         target = self.targets[index]
 
         tokenized_inputs = self.tokenizer(

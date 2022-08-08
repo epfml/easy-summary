@@ -5,7 +5,12 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 
 from QuestEval.questeval.questeval_metric import QuestEval
-questeval = QuestEval(no_cuda=False)
+
+MODEL_NAME = 't5-small'
+
+questeval = QuestEval(task = 'summarization', do_weighter = True, no_cuda=False)
+model = questeval.set_model('hyp','QG',MODEL_NAME)
+
 
 source_1 = "Since 2000, the recipient of the Kate Greenaway medal has also been presented with the Colin Mears award to the value of 35000."
 prediction_1 = "Since 2000, the winner of the Kate Greenaway medal has also been given to the Colin Mears award of the Kate Greenaway medal."
@@ -22,7 +27,7 @@ references_2 = [
 ]
 
 score = questeval.corpus_questeval(
-    hypothesis=[prediction_1, prediction_2], 
+    hypothesis=[model(source_1), prediction_2], 
     sources=[source_1, source_2],
     list_references=[references_1, references_2]
 )

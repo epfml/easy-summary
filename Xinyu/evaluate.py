@@ -21,6 +21,7 @@ from preprocessor import write_lines, yield_lines, count_line, read_lines, gener
 from easse.sari import corpus_sari
 import time
 from googletrans import Translator
+from new_model import SumSim
 
 
 @contextmanager
@@ -58,20 +59,25 @@ def set_seed(seed):
         torch.cuda.manual_seed_all(seed)
 
 
-set_seed(12)
+set_seed(42)
 model_dir = None
 _model_dirname = None
 max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_wikiparagh_10_epoch'
-checkpoint_path = 'checkpoint-epoch=3.ckpt'
+model_dirname = 'exp_wiki_doc_small_FineTuned_wikiparagh_1stOpt'
+checkpoint_path = 'checkpoint-epoch=4.ckpt'
 
 # load the model
-Model = T5FineTuner.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-model = Model.model.to(device)
-tokenizer = Model.tokenizer
+#Model = T5FineTuner.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+# model = Model.model.to(device)
+# tokenizer = Model.tokenizer
+Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+summarizer = Model.summarizer.to(device)
+simplifier = Model.simplifier.to(device)
+summarizer_tokenizer = Model.summarizer_tokenizer
+simplifier_tokenizer = Model.simplifier_tokenizer
 translator = Translator()
 
 
@@ -116,6 +122,7 @@ def generate(sentence, preprocessor):
     '''
     # if not torch.cuda.is_available():
     #     print("Simplifying: ", sentence)
+    '''
     sentence = preprocessor.encode_sentence(sentence)
     text = "simplify: " + sentence
     encoding = tokenizer(text, max_length=max_len,
@@ -146,6 +153,9 @@ def generate(sentence, preprocessor):
     #         final_outputs.append(sent)
 
     # return final_outputs
+    '''
+    
+    
 
 
     
