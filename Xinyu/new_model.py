@@ -85,18 +85,17 @@ class SumSim(pl.LightningModule):
         #self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
         # Load pre-trained model and tokenizer
         #self.summarizer = BartModel.from_pretrained("facebook/bart-large-cnn")
-        self.summarizer = BartForConditionalGeneration.from_pretrained("facebook/bart-large-cnn")
-        self.summarizer_tokenizer = BartTokenizerFast.from_pretrained("facebook/bart-large-cnn")
+        self.summarizer = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
+        self.summarizer_tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
         self.summarizer = self.summarizer.to(self.args.device)
 
-        # self.comparer = BertForPreTraining.from_pretrained('bert-base-uncased').to(self.args.device)
-        # self.comparer_tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-
-        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.simplifier = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
+        self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
+        self.simplifier = self.simplifier.to(self.args.device)
+        #self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
         #self.simplifier = T5FineTuner(args)
         #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
-        
-        self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
+        #self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
         self.preprocessor = load_preprocessor()
         # set custom loss TRUE or FALSE
         self.args.custom_loss = True
@@ -121,8 +120,8 @@ class SumSim(pl.LightningModule):
 
         return outputs
 
-    ### MLO94: 2nd Opt finetuned
     ### MLO98: 1nd Opt finetuned
+    ### MLO95: 1nd Opt finetuned, sum_loss + sim_loss
 
     def training_step(self, batch, batch_idx):
         source = batch["source"]
@@ -140,13 +139,17 @@ class SumSim(pl.LightningModule):
             return_tensors = 'pt'
         ).to(self.args.device)
 
-        ## compare with simple targets
-        sum_src_ids = inputs['input_ids'].to(self.args.device)
-        sum_src_mask = inputs['attention_mask'].to(self.args.device)
+        
+        src_ids = inputs['input_ids'].to(self.args.device)
+        src_mask = inputs['attention_mask'].to(self.args.device)
+
+
+        # compute the loss between summarization and simplification target
+        # sum_outputs.loss
 
         sum_outputs = self.summarizer(
-            input_ids = sum_src_ids,
-            attention_mask  = sum_src_mask,
+            input_ids = src_ids,
+            attention_mask  = src_mask,
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
@@ -193,6 +196,7 @@ class SumSim(pl.LightningModule):
         source_ids = tokenized_inputs["input_ids"].to(self.args.device)
         src_mask = tokenized_inputs["attention_mask"].to(self.args.device)
         
+        print(source_ids[0][:summary_ids.shape[1]] == summary_ids[0])
 
         # forward pass
         sim_outputs  = self(
@@ -211,7 +215,7 @@ class SumSim(pl.LightningModule):
             - lambda: control the weight of the complexity loss.
             '''
             loss = sim_outputs.loss
-            loss = sum_outputs.loss + loss
+            loss += sum_outputs.loss
             complex_score = 0
             ratio = 0
 
@@ -407,7 +411,8 @@ class SumSim(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      p.add_argument('-m','--model_name', default='t5-base')
+      p.add_argument('-Simplifier','--sim_model', default='t5-base')
+      p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
       p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
@@ -481,8 +486,8 @@ class TrainDataset(Dataset):
         return int(len(self.inputs) * self.sample_size)
 
     def __getitem__(self, index):
-        #source = self.inputs[index]
-        source = "simplify: " + self.inputs[index]
+        source = self.inputs[index]
+        #source = "simplify: " + self.inputs[index]
         target = self.targets[index]
 
         tokenized_inputs = self.tokenizer(
