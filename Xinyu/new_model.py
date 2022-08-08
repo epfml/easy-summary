@@ -162,12 +162,9 @@ class SumSim(pl.LightningModule):
             max_length = 256
         ).to(self.args.device)
 
-        summarization = self.summarizer_tokenizer.batch_decode(
-            summary_ids,
-            skip_special_tokens = True,
-            clean_up_tokenization_spaces = True
-        )
-        
+        summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
+        summary_attention_mask[summary_ids[:,:]==self.summarizer_tokenizer.pad_token_id]=0
+
 
         ### add simplify after summarizing not at original doc
         # Key_word
@@ -184,24 +181,21 @@ class SumSim(pl.LightningModule):
 
 
         #print(summarization)
-        tokenized_inputs = self.simplifier_tokenizer(
-            summarization,
-            truncation = True,
-            max_length = 256,
-            padding = 'max_length',
-            return_tensors = 'pt'
-        )
-
+        # tokenized_inputs = self.simplifier_tokenizer(
+        #     summarization,
+        #     truncation = True,
+        #     max_length = 256,
+        #     padding = 'max_length',
+        #     return_tensors = 'pt'
+        # )
+        # source_ids = tokenized_inputs["input_ids"].to(self.args.device)
+        # src_mask = tokenized_inputs["attention_mask"].to(self.args.device)
         
-        source_ids = tokenized_inputs["input_ids"].to(self.args.device)
-        src_mask = tokenized_inputs["attention_mask"].to(self.args.device)
         
-        print(source_ids[0][:summary_ids.shape[1]] == summary_ids[0])
-
         # forward pass
         sim_outputs  = self(
-            input_ids = source_ids,
-            attention_mask = src_mask,
+            input_ids = summary_ids,
+            attention_mask = summary_attention_mask,
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
@@ -228,7 +222,7 @@ class SumSim(pl.LightningModule):
             # print(loss)
             return loss
         else:
-            loss = outputs.loss
+            loss = sim_outputs.loss
             self.log('train_loss', loss, on_step=True, prog_bar=True, logger=True)
             #print(loss)
             return loss
@@ -246,7 +240,7 @@ class SumSim(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             #sentence = self.preprocessor.encode_sentence(sentence)
-            text = "simplify: " + sentence
+            #text = "simplify: " + sentence
             text = sentence
             # summarize the document
             inputs = self.summarizer_tokenizer(
@@ -264,31 +258,34 @@ class SumSim(pl.LightningModule):
                 max_length = 256
             ).to(self.args.device)
 
-            summarization = self.summarizer_tokenizer.batch_decode(
-                summary_ids,
-                skip_special_tokens = True,
-                clean_up_tokenization_spaces = False
-            )[0]
+            summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
+            summary_attention_mask[summary_ids==self.summarizer_tokenizer.pad_token_id]=0
+
+            # summarization = self.summarizer_tokenizer.batch_decode(
+            #     summary_ids,
+            #     skip_special_tokens = True,
+            #     clean_up_tokenization_spaces = False
+            # )[0]
 
             ### add after summarizing not at original doc
             #summarization = 'simplify: ' + summarization
 
             # simplify the document
-            encoding = self.simplifier_tokenizer(
-                summarization,
-                truncation=True,
-                max_length=self.args.max_seq_length,
-                padding='max_length',
-                return_tensors="pt"
-            )
+            # encoding = self.simplifier_tokenizer(
+            #     summarization,
+            #     truncation=True,
+            #     max_length=self.args.max_seq_length,
+            #     padding='max_length',
+            #     return_tensors="pt"
+            # )
 
-            input_ids = encoding["input_ids"].to(self.device)
-            attention_masks = encoding["attention_mask"].to(self.device)
+            # input_ids = encoding["input_ids"].to(self.device)
+            # attention_masks = encoding["attention_mask"].to(self.device)
 
             # set top_k = 130 and set top_p = 0.95 and num_return_sequences = 1
-            beam_outputs = self.simplifier.model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_masks,
+            beam_outputs = self.simplifier.generate(
+                input_ids=summary_ids,
+                attention_mask=summary_attention_mask,
                 do_sample=True,
                 max_length=self.args.max_seq_length,
                 num_beams=10,
@@ -299,7 +296,7 @@ class SumSim(pl.LightningModule):
             ).to(self.device)
             # final_outputs = []
             # for beam_output in beam_outputs:
-            sent = self.simplifier_tokenizer.decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+            sent = self.simplifier_tokenizer.batch_decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
             # if sent.lower() != sentence.lower() and sent not in final_outputs:
                 # final_outputs.append(sent)
             
