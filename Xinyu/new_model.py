@@ -120,8 +120,7 @@ class SumSim(pl.LightningModule):
 
         return outputs
 
-    ### MLO98: 1nd Opt finetuned
-    ### MLO95: 1nd Opt finetuned, sum_loss + sim_loss
+    ### MLO94: 2 Bart-base models
 
     def training_step(self, batch, batch_idx):
         source = batch["source"]
@@ -296,7 +295,7 @@ class SumSim(pl.LightningModule):
             ).to(self.device)
             # final_outputs = []
             # for beam_output in beam_outputs:
-            sent = self.simplifier_tokenizer.batch_decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+            sent = self.simplifier_tokenizer.batch_decode(beam_outputs, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
             # if sent.lower() != sentence.lower() and sent not in final_outputs:
                 # final_outputs.append(sent)
             
