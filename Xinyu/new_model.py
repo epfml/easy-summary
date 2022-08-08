@@ -139,6 +139,18 @@ class SumSim(pl.LightningModule):
             padding = 'max_length',
             return_tensors = 'pt'
         ).to(self.args.device)
+
+        ## compare with simple targets
+        sum_src_ids = inputs['input_ids'].to(self.args.device)
+        sum_src_mask = inputs['attention_mask'].to(self.args.device)
+
+        sum_outputs = self.summarizer(
+            input_ids = sum_src_ids,
+            attention_mask  = sum_src_mask,
+            labels = labels,
+            decoder_attention_mask = batch['target_mask']
+        )
+
         # generate summary
         summary_ids = self.summarizer.generate(
             inputs['input_ids'].to(self.args.device),
@@ -152,8 +164,6 @@ class SumSim(pl.LightningModule):
             skip_special_tokens = True,
             clean_up_tokenization_spaces = True
         )
-
-        ### compare with simple targets
         
 
         ### add simplify after summarizing not at original doc
@@ -185,7 +195,7 @@ class SumSim(pl.LightningModule):
         
 
         # forward pass
-        outputs  = self(
+        sim_outputs  = self(
             input_ids = source_ids,
             attention_mask = src_mask,
             labels = labels,
@@ -200,7 +210,8 @@ class SumSim(pl.LightningModule):
             - ratio: control the ratio of sentences we want to compute complexity for training.
             - lambda: control the weight of the complexity loss.
             '''
-            loss = outputs.loss
+            loss = sim_outputs.loss
+            loss = sum_outputs.loss + loss
             complex_score = 0
             ratio = 0
 
