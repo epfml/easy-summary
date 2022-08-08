@@ -147,12 +147,12 @@ class SumSim(pl.LightningModule):
         # compute the loss between summarization and simplification target
         # sum_outputs.loss
 
-        sum_outputs = self.summarizer(
-            input_ids = src_ids,
-            attention_mask  = src_mask,
-            labels = labels,
-            decoder_attention_mask = batch['target_mask']
-        )
+        # sum_outputs = self.summarizer(
+        #     input_ids = src_ids,
+        #     attention_mask  = src_mask,
+        #     labels = labels,
+        #     decoder_attention_mask = batch['target_mask']
+        # )
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -215,30 +215,10 @@ class SumSim(pl.LightningModule):
             - lambda: control the weight of the complexity loss.
             '''
             loss = sim_outputs.loss
-            loss += sum_outputs.loss
-            complex_score = 0
-            ratio = 0
+            #loss += sum_outputs.loss
 
-            ### Add randomness to the loss
-            if torch.rand(1) < ratio:
-                pred = self.get_train_output(outputs)
-                ### Mean of the complexity score of the generated sentence
-                # complex_score = get_complexity_score(pred, operation_type = 'mean')
 
-                ### Max of the complexity score of the generated sentence
-                complex_score = get_complexity_score(pred, operation_type = 'mean')
-                complex_score = math.exp(complex_score)
-            
-            #print(complex_score)
-             
-            ### 
-            lambda_1 = 60
-            lambda_2 = 0
-            ### loss1: square of the complexity score
-            #loss = lambda_1 * complex_score ** 2 + loss
-            
-            ### loss2: exponential of the complexity score
-            loss = lambda_1 * complex_score + loss
+
 
             
             # self.manual_backward(loss)
