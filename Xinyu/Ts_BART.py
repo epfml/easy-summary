@@ -39,7 +39,6 @@ from transformers import (
     BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
-from Ts_T5 import T5FineTuner
 
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
@@ -77,32 +76,18 @@ def word_rank_ratio(complex_sentence, simple_sentence):
     ), 2))
 ### Speicial tokens end
 
-class SumSim(pl.LightningModule):
+class BartFineTuner(pl.LightningModule):
     def __init__(self,args):
-        super(SumSim, self).__init__()
+        super(BartFineTuner, self).__init__()
         self.args = args
         self.save_hyperparameters()
         #self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
         # Load pre-trained model and tokenizer
-        #self.summarizer = BartModel.from_pretrained("facebook/bart-large-cnn")
-        # self.summarizer = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
-        # self.summarizer_tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
-        # self.summarizer = self.summarizer.to(self.args.device)
+        self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
+        self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
+        self.model = self.model.to(self.args.device)
 
-        self.summarizer = T5ForConditionalGeneration.from_pretrained(self.args.sum_model)
-        self.summarizer_tokenizer = T5TokenizerFast.from_pretrained(self.args.sum_model)
-        self.summarizer = self.summarizer.to(self.args.device)
 
-        # self.simplifier = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
-        # self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
-        # self.simplifier = self.simplifier.to(self.args.device)
-
-        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
-        self.simplifier = self.simplifier.model.to(self.args.device)
-        self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
-        #self.simplifier = T5FineTuner(args)
-        #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
-                #self.preprocessor = load_preprocessor()
         # set custom loss TRUE or FALSE
         self.args.custom_loss = True
 #        self.args.learning_rate = 1e-4
@@ -116,7 +101,7 @@ class SumSim(pl.LightningModule):
     decoder_input_ids = None,
     decoder_attention_mask = None, labels = None):
         
-        outputs = self.simplifier(
+        outputs = self.model(
             input_ids = input_ids,
             attention_mask = attention_mask,
             decoder_input_ids = decoder_input_ids,
@@ -126,84 +111,19 @@ class SumSim(pl.LightningModule):
 
         return outputs
 
-    ### MLO94: 2 Bart-base models
-    ### MLO98: T5-base ---- summarizer, T5-base finetuned ---- simplifier
-
     def training_step(self, batch, batch_idx):
         source = batch["source"]
         labels = batch['target_ids']
-        labels[labels[:,:] == self.simplifier_tokenizer.pad_token_id] = -100
+        labels[labels[:,:] == self.tokenizer.pad_token_id] = -100
         # zero the gradient buffers of all parameters
         self.opt.zero_grad()
-        #print(source, len(source))
-        ## summarizer stage
-        inputs = self.summarizer_tokenizer(
-            source,
-            max_length = 512,
-            truncation = True,
-            padding = 'max_length',
-            return_tensors = 'pt'
-        ).to(self.args.device)
-
-        
-        src_ids = inputs['input_ids'].to(self.args.device)
-        src_mask = inputs['attention_mask'].to(self.args.device)
-
-
-        # compute the loss between summarization and simplification target
-        # sum_outputs.loss
-
-        # sum_outputs = self.summarizer(
-        #     input_ids = src_ids,
-        #     attention_mask  = src_mask,
-        #     labels = labels,
-        #     decoder_attention_mask = batch['target_mask']
-        # )
-
-        # generate summary
-        summary_ids = self.summarizer.generate(
-            inputs['input_ids'].to(self.args.device),
-            num_beams = 10,
-            min_length = 10,
-            max_length = 256
-        ).to(self.args.device)
-
-        summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
-        summary_attention_mask[summary_ids[:,:]==self.summarizer_tokenizer.pad_token_id]=0
-
-
-        ### add simplify after summarizing not at original doc
-        # Key_word
-        # key_word = 'simplify: '
-        # res = []
-        # # print(len(batch['target']))
-        # for src in summarization:
-        #     src = key_word + src
-        #     res.append(src)
-        
-        # summarization = res
-        #print(res)
-        
-
-
-        #print(summarization)
-        # tokenized_inputs = self.simplifier_tokenizer(
-        #     summarization,
-        #     truncation = True,
-        #     max_length = 256,
-        #     padding = 'max_length',
-        #     return_tensors = 'pt'
-        # )
-        # source_ids = tokenized_inputs["input_ids"].to(self.args.device)
-        # src_mask = tokenized_inputs["attention_mask"].to(self.args.device)
-        
-        
         # forward pass
-        sim_outputs  = self(
-            input_ids = summary_ids,
-            attention_mask = summary_attention_mask,
+        outputs = self(
+            input_ids = batch["source_ids"],
+            attention_mask = batch["source_mask"],
             labels = labels,
-            decoder_attention_mask = batch['target_mask']
+            decoder_attention_mask = batch["target_mask"]
+            
         )
 
         if self.args.custom_loss:
@@ -214,7 +134,7 @@ class SumSim(pl.LightningModule):
             - ratio: control the ratio of sentences we want to compute complexity for training.
             - lambda: control the weight of the complexity loss.
             '''
-            loss = sim_outputs.loss
+            loss = outputs.loss
             #loss += sum_outputs.loss
 
 
@@ -228,7 +148,7 @@ class SumSim(pl.LightningModule):
             # print(loss)
             return loss
         else:
-            loss = sim_outputs.loss
+            loss = outputs.loss
             self.log('train_loss', loss, on_step=True, prog_bar=True, logger=True)
             #print(loss)
             return loss
@@ -246,68 +166,35 @@ class SumSim(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             #sentence = self.preprocessor.encode_sentence(sentence)
-            text = "summarize: " + sentence
             text = sentence
-            # summarize the document
-            inputs = self.summarizer_tokenizer(
+            encoding = self.tokenizer(
             [text],
-            max_length = 512,
+            max_length = 256,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
         )
-            # generate summary
-            summary_ids = self.summarizer.generate(
-                inputs['input_ids'].to(self.args.device),
+            input_ids = encoding['input_ids'].to(self.args.device)
+            attention_masks = encoding['attention_mask'].to(self.args.device)
+            
+            beam_outputs = self.model.generate(
+                input_ids = input_ids,
+                attention_masks = attention_masks,
+                do_sample = True,
+                max_length = 256,
                 num_beams = 10,
-                min_length = 30,
-                max_length = 256
+                top_k = 130,
+                top_p = 0.95,
+                early_stopping = True,
+                num_return_sequences = 1
             ).to(self.args.device)
-
-            summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
-            summary_attention_mask[summary_ids==self.summarizer_tokenizer.pad_token_id]=0
-
-            # summarization = self.summarizer_tokenizer.batch_decode(
-            #     summary_ids,
-            #     skip_special_tokens = True,
-            #     clean_up_tokenization_spaces = False
-            # )[0]
-
-            ### add after summarizing not at original doc
-            #summarization = 'simplify: ' + summarization
-
-            # simplify the document
-            # encoding = self.simplifier_tokenizer(
-            #     summarization,
-            #     truncation=True,
-            #     max_length=self.args.max_seq_length,
-            #     padding='max_length',
-            #     return_tensors="pt"
-            # )
-
-            # input_ids = encoding["input_ids"].to(self.device)
-            # attention_masks = encoding["attention_mask"].to(self.device)
-
-            # set top_k = 130 and set top_p = 0.95 and num_return_sequences = 1
-            beam_outputs = self.simplifier.generate(
-                input_ids=summary_ids,
-                attention_mask=summary_attention_mask,
-                do_sample=True,
-                max_length=self.args.max_seq_length,
-                num_beams=10,
-                top_k=130,
-                top_p=0.95,
-                early_stopping=True,
-                num_return_sequences=1
-            ).to(self.device)
+            
+             
             # final_outputs = []
             # for beam_output in beam_outputs:
             
             ## Bart:
-            #sent = self.simplifier_tokenizer.batch_decode(beam_outputs, skip_special_tokens=True, clean_up_tokenization_spaces=True)[0]
-            ## T5:
-            sent  = self.simplifier_tokenizer.decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
-            
+            sent = self.tokenizer.decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
             # if sent.lower() != sentence.lower() and sent not in final_outputs:
                 # final_outputs.append(sent)
             
@@ -331,20 +218,11 @@ class SumSim(pl.LightningModule):
     def configure_optimizers(self):
         "Prepare optimizer and schedule (linear warmup and decay)"
 
-        model1 = self.summarizer
-        model2 = self.simplifier
+        model = self.model
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in model2.named_parameters() if not any(nd in n for nd in no_decay)],
-                                "weight_decay": self.args.weight_decay,
-            },
-            {
-                "params": [p for n, p in model2.named_parameters() if any(nd in n for nd in no_decay)],
-                "weight_decay": 0.0,
-            },
-            {
-                "params": [p for n,p in model1.named_parameters()]
+                "params": [p for n,p in model.named_parameters()]
             }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
@@ -368,7 +246,7 @@ class SumSim(pl.LightningModule):
 
     def train_dataloader(self):
         train_dataset = TrainDataset(dataset=self.args.dataset,
-                                     tokenizer=self.simplifier_tokenizer,
+                                     tokenizer=self.tokenizer,
                                      max_len=self.args.max_seq_length,
                                      sample_size=self.args.train_sample_size)
 
@@ -390,7 +268,7 @@ class SumSim(pl.LightningModule):
 
     def val_dataloader(self):
         val_dataset = ValDataset(dataset=self.args.dataset,
-                                 tokenizer=self.simplifier_tokenizer,
+                                 tokenizer=self.tokenizer,
                                  max_len=self.args.max_seq_length,
                                  sample_size=self.args.valid_sample_size)
         return DataLoader(val_dataset,
@@ -401,7 +279,7 @@ class SumSim(pl.LightningModule):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       # facebook/bart-base
-      p.add_argument('-Summarizer','--sum_model', default='t5-base')
+      p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
       p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
@@ -476,7 +354,7 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         source = self.inputs[index]
-        source = "summarize: " + self.inputs[index]
+        #source = "summarize: " + self.inputs[index]
         target = self.targets[index]
 
         tokenized_inputs = self.tokenizer(
@@ -587,8 +465,7 @@ def train(args):
     print("Initialize model")
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SumSim(args).to(device)
-    #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
+    model = BartFineTuner(args)
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

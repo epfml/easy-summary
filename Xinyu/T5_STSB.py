@@ -9,7 +9,11 @@ tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-base')
 # model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
 # tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
-sent = ['Our story is amazing and a lot of people love it.']
+sent = ['summarize: marouane fellaini and adnan januzaj continue to show \
+the world they are not just teammates but also best mates. the manchester \
+united and belgium duo both posted pictures of themselves out \
+ at a restaurant on monday night ahead of their game against newcastle on wednesday . \
+januzaj poses in the middle of fellaini and a friend looking like somebody who failed to receive the memo about it being a jackson 5 themed night.']
 tg = ['The story is good and people like it.']
 
 
@@ -61,7 +65,10 @@ tmpids = model.generate(
                 num_return_sequences=1
 ).to(device)
 print(tmpids.shape)
+# BART model
 ans = tokenizer.batch_decode(tmpids, skip_special_tokens = True, clean_up_tokenization_spaces = True)[0]
+# T5 model
+#ans = tokenizer.decode(tmpids[0], skip_special_tokens = True, clean_up_tokenization_spaces = True)
 print(ans)
 
 outputs = model(
