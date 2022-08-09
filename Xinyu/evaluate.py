@@ -16,12 +16,13 @@ import json
 from preprocessor import Preprocessor
 import torch
 from transformers import T5ForConditionalGeneration, T5TokenizerFast
-from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DIR, WIKI_DOC
+from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DIR, WIKI_DOC, D_WIKI
 from preprocessor import write_lines, yield_lines, count_line, read_lines, generate_hash
 from easse.sari import corpus_sari
 import time
 from googletrans import Translator
 from Bart2 import SumSim
+#from T5_2 import SumSim
 
 
 @contextmanager
@@ -436,6 +437,55 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
         print("Already exists: ", output_score_filepath)
         print("".join(read_lines(output_score_filepath)))
 
+def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
+    dataset = D_WIKI
+    model_dir = EXP_DIR / model_dirname
+    output_dir = model_dir / 'outputs'
+
+    output_dir.mkdir(parents = True, exist_ok = True)
+    #features_hash = generate_hash(features_kwargs)
+    output_score_filepath = output_dir / f'score_{dataset}_{phase}.log.txt'
+    complex_filepath =get_data_filepath(dataset, phase, 'complex')
+    
+    if not output_score_filepath.exists() or count_line(output_score_filepath)==0:
+        start_time = time.time()
+        complex_filepath =get_data_filepath(dataset, phase, 'complex')
+        
+        #complex_filepath = get_data_filepath(dataset, phase, 'complex_summary_'+str(ratio))
+        pred_filepath = output_dir / f'{complex_filepath.stem}.txt'
+        ref_filepaths = get_data_filepath(dataset, phase, 'simple')
+
+        if pred_filepath.exists() and count_line(pred_filepath)==count_line(complex_filepath):
+            print("File is already processed.")
+        else:
+            simplify_file(complex_filepath, pred_filepath, features_kwargs, model_dirname)
+
+        print("Evaluate: ", pred_filepath)
+
+        with log_stdout(output_score_filepath):
+            scores  = evaluate_system_output(test_set='custom',
+                                             sys_sents_path=str(pred_filepath),
+                                             orig_sents_path=str(complex_filepath),
+                                             refs_sents_paths=str(ref_filepaths))
+
+            # if "WordRatioFeature" in features_kwargs:
+            #     print("W:", features_kwargs["WordRatioFeature"]["target_ratio"], "\t", end="")
+            # if "CharRatioFeature" in features_kwargs:
+            #     print("C:", features_kwargs["CharRatioFeature"]["target_ratio"], "\t", end="")
+            # if "LevenshteinRatioFeature" in features_kwargs:
+            #     print("L:", features_kwargs["LevenshteinRatioFeature"]["target_ratio"], "\t", end="")
+            # if "WordRankRatioFeature" in features_kwargs:
+            #     print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
+            # if "DependencyTreeDepthRatioFeature" in features_kwargs:
+            #     print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
+            print("SARI: {:.2f} \t BLEU: {:.2f} \t FKGL: {:.2f} ".format(scores['sari'], scores['bleu'], scores['fkgl']))
+            # print("{:.2f} \t {:.2f} \t {:.2f} ".format(scores['SARI'], scores['BLEU'], scores['FKGL']))
+
+            print("Execution time: --- %s seconds ---" % (time.time() - start_time))
+            return scores['sari']
+    else:
+        print("Already exists: ", output_score_filepath)
+        print("".join(read_lines(output_score_filepath)))
 
 
 # Specify the token features to use
@@ -448,9 +498,13 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
+# T5: SARI: 39.15      BLEU: 2.19      FKGL: 6.15 
+
+####### D_WIKI #######
+evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 # evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
 #                     phase='test', ratio = 0.7,

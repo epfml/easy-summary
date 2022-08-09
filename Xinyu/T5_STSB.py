@@ -2,14 +2,23 @@ from transformers import AutoTokenizer, BartForConditionalGeneration, BartTokeni
 import torch
 from easse.sari import corpus_sari
 from transformers import T5ForConditionalGeneration
-device = 'cuda'
-model = BartForConditionalGeneration.from_pretrained('facebook/bart-base').to(device)
-tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-base')
 
-# model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
-# tokenizer = T5Tokenizer.from_pretrained('t5-base')
+# import py7zr
+# f1 = py7zr.SevenZipFile('Xinyu/resources/datasets/D_wiki/train.src.7z')
+# f2 = py7zr.SevenZipFile('Xinyu/resources/datasets/D_wiki/train.tgt.7z')
+# f1.extractall('Xinyu/resources/datasets/D_wiki/D_wiki.train.complex')
+# f2.extractall('Xinyu/resources/datasets/D_wiki/D_wiki.train.simple')
+# f1.close()
+# f2.close()
 
-sent = ['summarize: marouane fellaini and adnan januzaj continue to show \
+device = 'cpu'
+# model = BartForConditionalGeneration.from_pretrained('facebook/bart-base').to(device)
+# tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-base')
+
+model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
+tokenizer = T5Tokenizer.from_pretrained('t5-base')
+
+sent = ['simplify marouane fellaini and adnan januzaj continue to show \
 the world they are not just teammates but also best mates. the manchester \
 united and belgium duo both posted pictures of themselves out \
  at a restaurant on monday night ahead of their game against newcastle on wednesday . \
@@ -29,6 +38,14 @@ inputs = tokenizer(
 src_ids = inputs['input_ids'].to(device)
 src_mask = inputs['attention_mask'].to(device)
 
+
+for src_id in src_ids:
+    # add tokens in front of the src_id
+    tokens = torch.tensor([18356, 10]).to(device)
+    src_id = torch.cat((tokens, src_id), dim=0)
+    print(src_id)
+
+print(src_ids)
 
 mid_ids = model.generate(
     src_ids,
@@ -80,4 +97,5 @@ outputs = model(
 
 print(outputs.loss)
 print(corpus_sari(sent, [ans], [tg]))
+
 

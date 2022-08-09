@@ -153,9 +153,16 @@ class SumSim(pl.LightningModule):
             max_length = 256
         ).to(self.args.device)
 
+        
+        # add 'simplify: ' ids
+        # 18356, 10
+        for i, summary_id in enumerate(summary_ids):
+            added_tokens = torch.tensor([18356, 10]).to(self.args.device)
+            summary_ids[i,:] = torch.cat((summary_id, added_tokens), dim=0)
+        
         summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
         summary_attention_mask[summary_ids[:,:]==self.summarizer_tokenizer.pad_token_id]=0
-
+            
 
         
         # forward pass
@@ -219,6 +226,10 @@ class SumSim(pl.LightningModule):
                 min_length = 30,
                 max_length = 256
             ).to(self.args.device)
+            
+            for i, summary_id in enumerate(summary_ids):
+                add_tokens = torch.tensor([18356, 10]).to(self.args.device)
+                summary_ids[i,:] = torch.cat((summary_id, add_tokens), dim=0)
 
             summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
             summary_attention_mask[summary_ids==self.summarizer_tokenizer.pad_token_id]=0
