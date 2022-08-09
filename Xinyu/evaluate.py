@@ -21,7 +21,7 @@ from preprocessor import write_lines, yield_lines, count_line, read_lines, gener
 from easse.sari import corpus_sari
 import time
 from googletrans import Translator
-from new_model import SumSim
+from Bart2 import SumSim
 
 
 @contextmanager
@@ -66,8 +66,8 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_wiki_doc_small_FineTuned_wikiparagh_1stOpt'
-checkpoint_path = 'checkpoint-epoch=4.ckpt'
+model_dirname = 'exp_WikiDocSmall_BART'
+checkpoint_path = 'checkpoint-epoch=3.ckpt'
 
 # load the model
 #Model = T5FineTuner.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
@@ -81,47 +81,45 @@ simplifier_tokenizer = Model.simplifier_tokenizer
 translator = Translator()
 
 
-# def load_model(model_dirname=None):
-#     print("Load model", model_dirname)
-#     global model, tokenizer, device, model_dir, _model_dirname, max_len
-#     if model_dirname is None:  # default
-#         model_dir = get_last_experiment_dir()
-#     else:
-#         model_dir = EXP_DIR / model_dirname
-
-#     if _model_dirname is None or model_dirname != _model_dirname:
-#         print("loading model...")
-#         _model_dirname = model_dir.stem
-
-#         print("Model dir: ", model_dir)
-#         params_filepath = model_dir / "params.json"
-#         params = json.load(params_filepath.open('r'))
-#         max_len = int(params['max_seq_length'])
-#         # max_len = 80
-
-#         if (model_dir / 'pytorch_model.bin').exists():
-#             model = T5ForConditionalGeneration.from_pretrained(model_dir)
-#             tokenizer = T5TokenizerFast.from_pretrained(params['tokenizer_name_or_path'])
-#         else:
-#             checkpoints = list(model_dir.glob('checkpoint*'))
-#             best_checkpoint = sorted(checkpoints, reverse=True)[0] 
-#             print('check_point:', best_checkpoint)
-#             T5_model = T5FineTuner.load_from_checkpoint(checkpoint_path=best_checkpoint)
-#             model = T5_model.model
-#             tokenizer = T5_model.tokenizer    
-            
-        
-#         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#         # print("device ", device)
-#         model = model.to(device)
 
 
-def generate(sentence, preprocessor):
+def generate(sentence, preprocessor=None):
     '''
     Apply model to generate prediction
     '''
     # if not torch.cuda.is_available():
     #     print("Simplifying: ", sentence)
+    encoding = summarizer_tokenizer(
+        [sentence],
+        max_length = 256,
+        truncation = True,
+        padding = 'max_length',
+        return_tensors = 'pt',
+    )
+    
+    summary_ids = summarizer.generate(
+        encoding['input_ids'].to(device),
+        num_beams = 10,
+        min_length = 10,
+        max_length = 256,
+    ).to(device)
+    
+    summary_atten_mask = torch.ones(summary_ids.shape).to(device)
+    summary_atten_mask[summary_ids[:,:] == summarizer_tokenizer.pad_token_id] = 0
+    
+    beam_outputs = simplifier.generate(
+        input_ids = summary_ids,
+        attention_mask = summary_atten_mask,
+        do_sample = True,
+        max_length = 256,
+        num_beams = 10, top_k = 130, top_p = 0.95,
+        early_stopping = True,
+        num_return_sequences = 1,
+    )
+    
+    sent = simplifier_tokenizer.decode(beam_outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    return sent
+    
     '''
     sentence = preprocessor.encode_sentence(sentence)
     text = "simplify: " + sentence
@@ -244,13 +242,14 @@ def back_translation(text):
     return translator.translate(X.text, dest = 'en').text
 
 
-def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirname=None, post_processing=True):
+def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model_dirname=None, post_processing=True):
     '''
     Obtain the simplified sentences (predictions) from the original complex sentences.
     '''
     # load_model(model_dirname)
     # global model, tokenizer, device, model_dir, _model_dirname, max_len, Model
-    preprocessor = Preprocessor(features_kwargs)
+    #preprocessor = Preprocessor(features_kwargs)
+    
     total_lines = count_line(complex_filepath)
     print(complex_filepath)
     print(complex_filepath.stem)
@@ -258,10 +257,10 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs, model_dirn
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        output_sents = generate(complex_sent, preprocessor)
+        output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
-        output_sents = back_translation(output_sents)
+        #output_sents = back_translation(output_sents)
 
         print(f"{n_line+1}/{total_lines}", " : ", output_sents)
         if output_sents:
@@ -387,29 +386,22 @@ def evaluate_on_asset(features_kwargs, phase, model_dirname=None):
         print("".join(read_lines(output_score_filepath)))
 
 
-def evaluate_on_WIKIDOC(features_kwargs, phase, ratio=None, model_dirname = None):
+def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
     dataset = WIKI_DOC
     model_dir = EXP_DIR / model_dirname
     output_dir = model_dir / 'outputs'
 
     output_dir.mkdir(parents = True, exist_ok = True)
-
-    features_hash = generate_hash(features_kwargs)
-    output_score_filepath = output_dir / f'score_{features_hash}_{dataset}_{phase}.log.txt'
-    if ratio is None:
-        complex_filepath =get_data_filepath(dataset, phase, 'complex')
-    else:
-        complex_filepath = get_data_filepath(dataset, phase, 'complex_summary_'+str(ratio))
-
+    #features_hash = generate_hash(features_kwargs)
+    output_score_filepath = output_dir / f'score_{dataset}_{phase}.log.txt'
+    complex_filepath =get_data_filepath(dataset, phase, 'complex')
+    
     if not output_score_filepath.exists() or count_line(output_score_filepath)==0:
         start_time = time.time()
-        if ratio is None:
-            complex_filepath =get_data_filepath(dataset, phase, 'complex')
-        else:
-            complex_filepath = get_data_filepath(dataset, phase, 'complex_summary_'+str(ratio))
-
+        complex_filepath =get_data_filepath(dataset, phase, 'complex')
+        
         #complex_filepath = get_data_filepath(dataset, phase, 'complex_summary_'+str(ratio))
-        pred_filepath = output_dir / f'{features_hash}_{complex_filepath.stem}.txt'
+        pred_filepath = output_dir / f'{complex_filepath.stem}.txt'
         ref_filepaths = get_data_filepath(dataset, phase, 'simple')
 
         if pred_filepath.exists() and count_line(pred_filepath)==count_line(complex_filepath):
@@ -447,18 +439,21 @@ def evaluate_on_WIKIDOC(features_kwargs, phase, ratio=None, model_dirname = None
 
 
 # Specify the token features to use
-features_kwargs = {
-    # 'WordRatioFeature': {'target_ratio': 1.05},
-    'CharRatioFeature': {'target_ratio': 0.93},
-    'LevenshteinRatioFeature': {'target_ratio': 0.62},
-    'WordRankRatioFeature': {'target_ratio': 0.68},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.72}
-}
+# features_kwargs = {
+#     # 'WordRatioFeature': {'target_ratio': 1.05},
+#     'CharRatioFeature': {'target_ratio': 0.93},
+#     'LevenshteinRatioFeature': {'target_ratio': 0.62},
+#     'WordRankRatioFeature': {'target_ratio': 0.68},
+#     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.72}
+# }
 
 ####### WIKI_DOC #######
-evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
-                    phase='test', ratio = 0.7,
-                    model_dirname=model_dirname)
+evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+
+
+# evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
+#                     phase='test', ratio = 0.7,
+#                     model_dirname=model_dirname)
 #### wikiparagh oldloss ####
 # original doc
 # C: 0.95         L: 0.68         WR: 0.82        DTD: 0.79       SARI: 39.24      BLEU: 8.90      FKGL: 10.03 
