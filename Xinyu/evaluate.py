@@ -417,16 +417,16 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
                                              orig_sents_path=str(complex_filepath),
                                              refs_sents_paths=str(ref_filepaths))
 
-            if "WordRatioFeature" in features_kwargs:
-                print("W:", features_kwargs["WordRatioFeature"]["target_ratio"], "\t", end="")
-            if "CharRatioFeature" in features_kwargs:
-                print("C:", features_kwargs["CharRatioFeature"]["target_ratio"], "\t", end="")
-            if "LevenshteinRatioFeature" in features_kwargs:
-                print("L:", features_kwargs["LevenshteinRatioFeature"]["target_ratio"], "\t", end="")
-            if "WordRankRatioFeature" in features_kwargs:
-                print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
-            if "DependencyTreeDepthRatioFeature" in features_kwargs:
-                print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
+            # if "WordRatioFeature" in features_kwargs:
+            #     print("W:", features_kwargs["WordRatioFeature"]["target_ratio"], "\t", end="")
+            # if "CharRatioFeature" in features_kwargs:
+            #     print("C:", features_kwargs["CharRatioFeature"]["target_ratio"], "\t", end="")
+            # if "LevenshteinRatioFeature" in features_kwargs:
+            #     print("L:", features_kwargs["LevenshteinRatioFeature"]["target_ratio"], "\t", end="")
+            # if "WordRankRatioFeature" in features_kwargs:
+            #     print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
+            # if "DependencyTreeDepthRatioFeature" in features_kwargs:
+            #     print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
             print("SARI: {:.2f} \t BLEU: {:.2f} \t FKGL: {:.2f} ".format(scores['sari'], scores['bleu'], scores['fkgl']))
             # print("{:.2f} \t {:.2f} \t {:.2f} ".format(scores['SARI'], scores['BLEU'], scores['FKGL']))
 
@@ -450,6 +450,7 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
 ####### WIKI_DOC #######
 evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
+# Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
 
 # evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
 #                     phase='test', ratio = 0.7,
