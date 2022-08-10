@@ -123,8 +123,7 @@ class SumSim(pl.LightningModule):
 
         return outputs
 
-    ### MLO94: 2 Bart-base models
-    ### MLO98: T5-base ---- summarizer, T5-base finetuned ---- simplifier
+
 
     def training_step(self, batch, batch_idx):
         source = batch["source"]
@@ -150,12 +149,12 @@ class SumSim(pl.LightningModule):
         # compute the loss between summarization and simplification target
         # sum_outputs.loss
 
-        # sum_outputs = self.summarizer(
-        #     input_ids = src_ids,
-        #     attention_mask  = src_mask,
-        #     labels = labels,
-        #     decoder_attention_mask = batch['target_mask']
-        # )
+        sum_outputs = self.summarizer(
+            input_ids = src_ids,
+            attention_mask  = src_mask,
+            labels = labels,
+            decoder_attention_mask = batch['target_mask']
+        )
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -187,7 +186,11 @@ class SumSim(pl.LightningModule):
             - ratio: control the ratio of sentences we want to compute complexity for training.
             - lambda: control the weight of the complexity loss.
             '''
-            loss = sim_outputs.loss
+            w1 = 20
+            w2 = 1
+
+            loss = sim_outputs.loss * w1
+            loss += sum_outputs.loss * w2
             #loss += sum_outputs.loss
 
 
@@ -285,18 +288,13 @@ class SumSim(pl.LightningModule):
 
         model1 = self.summarizer
         model2 = self.simplifier
-        no_decay = ["bias", "LayerNorm.weight"]
+        #no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in model2.named_parameters() if not any(nd in n for nd in no_decay)],
-                                "weight_decay": self.args.weight_decay,
-            },
-            {
-                "params": [p for n, p in model2.named_parameters() if any(nd in n for nd in no_decay)],
-                "weight_decay": 0.0,
-            },
-            {
                 "params": [p for n,p in model1.named_parameters()]
+            },
+            {
+                "params": [p for n,p in model2.named_parameters()]
             }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)

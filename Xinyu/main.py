@@ -127,7 +127,11 @@ def run_training(args, dataset):
     #     #train_summary(args)
     #     train(args)
 
-dataset = D_WIKI
+## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
+## MLO96: Bart pretrained+finetuned(simplification) on wiki-doc-small with new loss function
+
+
+dataset = WIKI_DOC_Small
 
 args = parse_arguments()
 run_training(args, dataset)

@@ -12,11 +12,11 @@ from transformers import T5ForConditionalGeneration
 # f2.close()
 
 device = 'cpu'
-# model = BartForConditionalGeneration.from_pretrained('facebook/bart-base').to(device)
-# tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-base')
+model = BartForConditionalGeneration.from_pretrained('facebook/bart-base').to(device)
+tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-base')
 
-model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
-tokenizer = T5Tokenizer.from_pretrained('t5-base')
+# model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
+# tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
 sent = ['simplify marouane fellaini and adnan januzaj continue to show \
 the world they are not just teammates but also best mates. the manchester \
