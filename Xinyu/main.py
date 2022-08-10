@@ -8,7 +8,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 import torch
-from preprocessor import TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
+from preprocessor import D_WIKI, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
 import time
 import json
 from contextlib import contextmanager
@@ -21,9 +21,9 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from optuna.integration import PyTorchLightningPruningCallback
 #from new_model import SumSim, train
-from Ts_BART import BartFineTuner, train
-
-
+#from Ts_BART import BartFineTuner, train
+#from T5_2 import SumSim, train
+from Bart2 import SumSim, train
 
 
 def parse_arguments():
@@ -40,8 +40,8 @@ def parse_arguments():
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
 })
     #p = T5FineTuner.add_model_specific_args(p)
-    #p = SumSim.add_model_specific_args(p)
-    p = BartFineTuner.add_model_specific_args(p)
+    p = SumSim.add_model_specific_args(p)
+    #p = BartFineTuner.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
     return args
@@ -127,7 +127,7 @@ def run_training(args, dataset):
     #     #train_summary(args)
     #     train(args)
 
-dataset = WIKILARGE_DATASET
+dataset = D_WIKI
 
 args = parse_arguments()
 run_training(args, dataset)

@@ -49,6 +49,7 @@ WIKI_DOC = 'wiki_doc'
 WIKI_DOC_Small = 'wiki_doc_small'
 WIKI_PARAGH_SMALL = 'wiki_paragh_small'
 D_WIKI = 'D_wiki'
+D_WIKI_SMALL = 'D_wiki_small'
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"
 WORD_FREQUENCY_FILEPATH = RESOURCES_DIR /'enwiki-words-frequency.txt'

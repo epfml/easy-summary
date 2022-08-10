@@ -40,6 +40,7 @@ from transformers import (
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
 from Ts_T5 import T5FineTuner
+from Ts_BART import BartFineTuner
 
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
@@ -90,8 +91,10 @@ class SumSim(pl.LightningModule):
         self.summarizer = self.summarizer.to(self.args.device)
 
 
-        self.simplifier = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
-        self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
+        #self.simplifier = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
+        self.simplifier = BartFineTuner.load_from_checkpoint("Xinyu/experiments/exp_BART_FineTuned_WikiLarge/checkpoint-epoch=4.ckpt")
+        self.simplifier = self.simplifier.model.to(self.args.device)
+        self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
         self.simplifier = self.simplifier.to(self.args.device)
 
         #self.simplifier = T5FineTuner(args)
@@ -348,9 +351,9 @@ class SumSim(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      p.add_argument('-Simplifier','--sim_model', default='t5-base')
       # facebook/bart-base
-      p.add_argument('-Summarizer','--sum_model', default='t5-base')
+      p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
+      p.add_argument('-Simplifier','--sim_model', default='facebook/bart-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
       p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
@@ -425,7 +428,7 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         source = self.inputs[index]
-        source = "summarize: " + self.inputs[index]
+        # source = "summarize: " + self.inputs[index]
         target = self.targets[index]
 
         tokenized_inputs = self.tokenizer(

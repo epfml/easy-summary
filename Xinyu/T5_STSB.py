@@ -42,8 +42,8 @@ src_mask = inputs['attention_mask'].to(device)
 for src_id in src_ids:
     # add tokens in front of the src_id
     tokens = torch.tensor([18356, 10]).to(device)
-    src_id = torch.cat((tokens, src_id), dim=0)
-    print(src_id)
+    src_id = torch.cat((tokens, src_id), dim=0)[:-2]
+    print(src_id.shape)
 
 print(src_ids)
 
