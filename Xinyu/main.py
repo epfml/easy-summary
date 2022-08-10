@@ -128,7 +128,8 @@ def run_training(args, dataset):
     #     train(args)
 
 ## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
-## MLO96: Bart pretrained+finetuned(simplification) on wiki-doc-small with new loss function
+## MLO96: Bart pretrained+finetuned(simplification) on wiki-doc-small with new loss function (sum_loss+sim_loss)
+## MLO98: T5 pretrained+finetuned(simplification) on wiki-doc-small with new loss (sum_loss+sim_loss)
 
 
 dataset = WIKI_DOC_Small

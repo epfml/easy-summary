@@ -138,12 +138,12 @@ class SumSim(pl.LightningModule):
         # compute the loss between summarization and simplification target
         # sum_outputs.loss
 
-        # sum_outputs = self.summarizer(
-        #     input_ids = src_ids,
-        #     attention_mask  = src_mask,
-        #     labels = labels,
-        #     decoder_attention_mask = batch['target_mask']
-        # )
+        sum_outputs = self.summarizer(
+            input_ids = src_ids,
+            attention_mask  = src_mask,
+            labels = labels,
+            decoder_attention_mask = batch['target_mask']
+        )
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -181,7 +181,11 @@ class SumSim(pl.LightningModule):
             - ratio: control the ratio of sentences we want to compute complexity for training.
             - lambda: control the weight of the complexity loss.
             '''
-            loss = sim_outputs.loss
+            w1 = 20
+            w2 = 1
+            
+            loss = sim_outputs.loss * w1
+            loss += sum_outputs.loss * w2
             #loss += sum_outputs.loss
 
             # self.manual_backward(loss)

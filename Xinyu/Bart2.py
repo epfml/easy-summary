@@ -8,6 +8,7 @@ from lib2to3.pgen2 import token
 from pathlib import Path
 from weakref import ref
 import math
+from Xinyu.playgd import W
 from pytorch_lightning.loggers import TensorBoardLogger
 from easse.sari import corpus_sari
 from torch.nn import functional as F
@@ -312,6 +313,9 @@ class SumSim(pl.LightningModule):
             },
             {
                 "params": [p for n,p in model2.named_parameters()]
+            },
+            {
+                "params": self.W.parameters()
             }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)

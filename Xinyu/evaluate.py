@@ -512,6 +512,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 # Bart: SARI: 42.57      BLEU: 12.57     FKGL: 8.85 
+# T5: SARI: 43.35      BLEU: 11.32     FKGL: 8.73
 
 # evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
 #                     phase='test', ratio = 0.7,
