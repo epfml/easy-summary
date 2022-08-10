@@ -97,6 +97,7 @@ class SumSim(pl.LightningModule):
         self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
         self.simplifier = self.simplifier.to(self.args.device)
 
+        self.W = nn.Parameter(torch.randn((768, int(768/2)), requires_grad=True))
         #self.simplifier = T5FineTuner(args)
         #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
                 #self.preprocessor = load_preprocessor()
@@ -135,7 +136,7 @@ class SumSim(pl.LightningModule):
         ## summarizer stage
         inputs = self.summarizer_tokenizer(
             source,
-            max_length = 512,
+            max_length = 256,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -155,6 +156,8 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
+        
+        H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -163,20 +166,32 @@ class SumSim(pl.LightningModule):
             min_length = 10,
             max_length = 256
         ).to(self.args.device)
+        
+        padded_summary_ids = torch.zeros((summary_ids.shape[0], 256), dtype=torch.long).fill_(self.simplifier_tokenizer.pad_token_id).to(self.args.device)
+        
+        for i, summary_id in enumerate(summary_ids):
+            padded_summary_ids[i, :summary_id.shape[0]] = summary_id
 
-        summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
-        summary_attention_mask[summary_ids[:,:]==self.summarizer_tokenizer.pad_token_id]=0
+        summary_attention_mask = torch.ones(padded_summary_ids.shape).to(self.args.device)
+        summary_attention_mask[padded_summary_ids[:,:]==self.summarizer_tokenizer.pad_token_id]=0
 
 
         
         
         # forward pass
         sim_outputs  = self(
-            input_ids = summary_ids,
+            input_ids = padded_summary_ids,
             attention_mask = summary_attention_mask,
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
+        H2 = sim_outputs.encoder_last_hidden_state
+        
+        Rep1 = torch.matmul(H1, self.W)
+        Rep2 = torch.matmul(H2, self.W)
+        
+        CosSim = nn.CosineSimilarity(dim=2, eps=1e-6)
+        sim_score = CosSim(Rep1, Rep2)
 
         if self.args.custom_loss:
             '''
@@ -188,9 +203,11 @@ class SumSim(pl.LightningModule):
             '''
             w1 = 20
             w2 = 1
+            lambda_ = 5
 
             loss = sim_outputs.loss * w1
             loss += sum_outputs.loss * w2
+            loss += -lambda_ * (sim_score.mean(dim = 1).mean(dim = 0))
             #loss += sum_outputs.loss
 
 

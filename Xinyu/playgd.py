@@ -2,6 +2,7 @@ from transformers import AutoTokenizer, BartForConditionalGeneration, BartTokeni
 import torch
 from easse.sari import corpus_sari
 from transformers import T5ForConditionalGeneration
+import torch.nn as nn
 
 # import py7zr
 # f1 = py7zr.SevenZipFile('Xinyu/resources/datasets/D_wiki/train.src.7z')
@@ -38,28 +39,6 @@ inputs = tokenizer(
 src_ids = inputs['input_ids'].to(device)
 src_mask = inputs['attention_mask'].to(device)
 
-
-for src_id in src_ids:
-    # add tokens in front of the src_id
-    tokens = torch.tensor([18356, 10]).to(device)
-    src_id = torch.cat((tokens, src_id), dim=0)[:-2]
-    print(src_id.shape)
-
-print(src_ids)
-
-mid_ids = model.generate(
-    src_ids,
-    num_beams=10, min_length = 3,
-    max_length=20,
-).to(device)
-
-print(mid_ids)
-print(mid_ids.shape)
-
-attention_mask = torch.ones(mid_ids.shape).to(device)
-print(tokenizer.pad_token_id)
-attention_mask[mid_ids[:,:]==tokenizer.pad_token_id]=0
-
 tgt = tokenizer(
     tg,
     max_length = 256,
@@ -69,12 +48,55 @@ tgt = tokenizer(
 ).to(device)
 
 labels = tgt['input_ids'].to(device)
+labels[labels[:,:] == tokenizer.pad_token_id] = -100
 decoder_attention_mask = tgt['attention_mask'].to(device)
 
-tmpids = model.generate(
-    mid_ids,
+
+# for src_id in src_ids:
+#     # add tokens in front of the src_id
+#     tokens = torch.tensor([18356, 10]).to(device)
+#     src_id = torch.cat((tokens, src_id), dim=0)[:-2]
+#     print(src_id.shape)
+
+# print(src_ids)
+
+sum_outputs = model(
+    input_ids = src_ids,
+    attention_mask = src_mask,
+    labels = labels,
+    decoder_attention_mask = decoder_attention_mask
+)
+
+# (1, 256, 768)
+print(sum_outputs.encoder_last_hidden_state.shape)
+
+
+summary_ids = model.generate(
+    src_ids,
     num_beams=10, min_length = 3,
-    max_length=20,
+    max_length=256,
+).to(device)
+
+# (1,98)
+print(summary_ids)
+print(summary_ids.shape[1])
+
+padded_summary_ids = torch.zeros((summary_ids.shape[0], 256), dtype = torch.long).fill_(tokenizer.pad_token_id).to(device)
+
+for i, summary_id in enumerate(summary_ids):
+    print(summary_id.shape)
+    padded_summary_ids[i, :summary_id.shape[0]] = summary_id
+
+print(padded_summary_ids.shape)
+attention_mask = torch.ones(padded_summary_ids.shape).to(device)
+print(tokenizer.pad_token_id)
+attention_mask[padded_summary_ids[:,:]==tokenizer.pad_token_id]=0
+
+
+tmpids = model.generate(
+    padded_summary_ids,
+    num_beams=10, min_length = 3,
+    max_length=256,
     do_sample=True,
                 top_k=130,
                 top_p=0.95,
@@ -86,16 +108,26 @@ print(tmpids.shape)
 ans = tokenizer.batch_decode(tmpids, skip_special_tokens = True, clean_up_tokenization_spaces = True)[0]
 # T5 model
 #ans = tokenizer.decode(tmpids[0], skip_special_tokens = True, clean_up_tokenization_spaces = True)
-print(ans)
+#print(ans)
 
 outputs = model(
-    input_ids = mid_ids,
+    input_ids = padded_summary_ids,
     attention_mask = attention_mask,
     labels = labels,
     decoder_attention_mask = decoder_attention_mask
 )
+# (1,98,768)
+print(outputs.encoder_last_hidden_state.shape)
 
-print(outputs.loss)
-print(corpus_sari(sent, [ans], [tg]))
+W = torch.randn((768, int(768/2)), requires_grad=True).to(device)
 
+r1 = torch.matmul(sum_outputs.encoder_last_hidden_state, W)
+print(r1.shape)
+r2 = torch.matmul(outputs.encoder_last_hidden_state, W)
+print(r2.shape)
+
+sim = nn.CosineSimilarity(dim=2, eps=1e-6)
+score = sim(r1,r2)
+
+print(score.mean(dim = 1))
 
