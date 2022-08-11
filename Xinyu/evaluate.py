@@ -21,8 +21,8 @@ from preprocessor import write_lines, yield_lines, count_line, read_lines, gener
 from easse.sari import corpus_sari
 import time
 from googletrans import Translator
-#from Bart2 import SumSim
-from T5_2 import SumSim
+from Bart2 import SumSim
+#from T5_2 import SumSim
 
 
 @contextmanager
@@ -67,7 +67,7 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocSmall_T5'
+model_dirname = 'exp_WikiDocSmall_BART_SumSimLoss'
 checkpoint_path = 'checkpoint-epoch=3.ckpt'
 
 # load the model
@@ -88,9 +88,9 @@ def generate(sentence, preprocessor=None):
     '''
     Apply model to generate prediction
     '''
-    # if not torch.cuda.is_available():
-    #     print("Simplifying: ", sentence)
-    sentence = 'summarize ' + sentence
+    # For T5
+    #sentence = 'summarize ' + sentence
+
     encoding = summarizer_tokenizer(
         [sentence],
         max_length = 256,
@@ -106,9 +106,10 @@ def generate(sentence, preprocessor=None):
         max_length = 256,
     ).to(device)
     
-    for i, summary_id in enumerate(summary_ids):
-        add_tokens = torch.tensor([18356, 10]).to(device)
-        summary_ids[i,:] = torch.cat((summary_id, add_tokens), dim=0)[:-2]
+    # For T5
+    # for i, summary_id in enumerate(summary_ids):
+    #     add_tokens = torch.tensor([18356, 10]).to(device)
+    #     summary_ids[i,:] = torch.cat((summary_id, add_tokens), dim=0)[:-2]
     
     summary_atten_mask = torch.ones(summary_ids.shape).to(device)
     summary_atten_mask[summary_ids[:,:] == summarizer_tokenizer.pad_token_id] = 0
@@ -505,14 +506,22 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 ####### WIKI_DOC #######
 #evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
+### Original loss function ###
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
-# SARI: 40.04      BLEU: 2.55      FKGL: 7.73 
+# T5: SARI: 40.04      BLEU: 2.55      FKGL: 7.73 
+
+### SimLoss + SumLoss ###
+# Bart: SARI: 40.46      BLEU: 2.41      FKGL: 8.38
 
 ####### D_WIKI #######
 evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
+### Original loss function ###
 # Bart: SARI: 42.57      BLEU: 12.57     FKGL: 8.85 
 # T5: SARI: 43.35      BLEU: 11.32     FKGL: 8.73
+
+### SimLoss + SumLoss ###
+# Bart:: SARI: 42.75      BLEU: 7.66      FKGL: 8.02 
 
 # evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
 #                     phase='test', ratio = 0.7,

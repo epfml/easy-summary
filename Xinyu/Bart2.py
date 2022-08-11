@@ -8,7 +8,6 @@ from lib2to3.pgen2 import token
 from pathlib import Path
 from weakref import ref
 import math
-from Xinyu.playgd import W
 from pytorch_lightning.loggers import TensorBoardLogger
 from easse.sari import corpus_sari
 from torch.nn import functional as F
@@ -84,7 +83,6 @@ class SumSim(pl.LightningModule):
         super(SumSim, self).__init__()
         self.args = args
         self.save_hyperparameters()
-        #self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
         # Load pre-trained model and tokenizer
         #self.summarizer = BartModel.from_pretrained("facebook/bart-large-cnn")
         self.summarizer = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
@@ -98,7 +96,7 @@ class SumSim(pl.LightningModule):
         self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
         self.simplifier = self.simplifier.to(self.args.device)
 
-        self.W = nn.Parameter(torch.randn((768, int(768/2)), requires_grad=True))
+        self.W = torch.randn((768, int(768/2)), requires_grad=True, device = self.args.device)
         #self.simplifier = T5FineTuner(args)
         #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
                 #self.preprocessor = load_preprocessor()
@@ -204,7 +202,7 @@ class SumSim(pl.LightningModule):
             '''
             w1 = 20
             w2 = 1
-            lambda_ = 5
+            lambda_ = 20
 
             loss = sim_outputs.loss * w1
             loss += sum_outputs.loss * w2
@@ -315,7 +313,7 @@ class SumSim(pl.LightningModule):
                 "params": [p for n,p in model2.named_parameters()]
             },
             {
-                "params": self.W.parameters()
+                "params": self.W
             }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
