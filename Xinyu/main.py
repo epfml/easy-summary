@@ -24,7 +24,8 @@ from optuna.integration import PyTorchLightningPruningCallback
 #from Ts_BART import BartFineTuner, train
 #from T5_2 import SumSim, train
 #from Bart2 import SumSim, train
-from Bart_baseline_finetuned import BartBaseLineFineTuned, train
+#from Bart_baseline_finetuned import BartBaseLineFineTuned, train
+from T5_baseline_finetuned import T5BaseLineFineTuned, train
 
 
 def parse_arguments():
@@ -43,7 +44,8 @@ def parse_arguments():
     #p = T5FineTuner.add_model_specific_args(p)
     #p = SumSim.add_model_specific_args(p)
     #p = BartFineTuner.add_model_specific_args(p)
-    p = BartBaseLineFineTuned.add_model_specific_args(p)
+    #p = BartBaseLineFineTuned.add_model_specific_args(p)
+    p = T5BaseLineFineTuned.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
     return args
@@ -133,8 +135,8 @@ def run_training(args, dataset):
 ## MLO98: Bart ...(same) on wiki-doc-mid (10K) original loss
 ## MLO95: Bart ...(same) on wiki-doc-small (5k) CosSim+SumSimLoss (w1=20, w2=4,lambda=10)
 ## MLO96: test Bart (CosSim+SumSimLoss) on D-wiki
-## MLO97: Bart single (finetuned on WikiLarge) finetuning on D-wiki-small
-dataset = D_WIKI_SMALL
+## MLO97: Bart single (finetuned on WikiLarge) finetuning on wiki-doc-small
+dataset = WIKI_DOC_Small
 
 args = parse_arguments()
 run_training(args, dataset)

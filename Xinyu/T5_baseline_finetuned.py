@@ -39,7 +39,7 @@ from transformers import (
     BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
-
+from Ts_T5 import T5FineTuner
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
 class MetricsCallback(pl.Callback):
@@ -51,16 +51,17 @@ class MetricsCallback(pl.Callback):
       self.metrics.append(trainer.callback_metrics)
 
 
+   
 
-class BartFineTuner(pl.LightningModule):
+class T5BaseLineFineTuned(pl.LightningModule):
     def __init__(self,args):
-        super(BartFineTuner, self).__init__()
+        super(T5BaseLineFineTuned, self).__init__()
         self.args = args
         self.save_hyperparameters()
-        #self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
+        
         # Load pre-trained model and tokenizer
-        self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
-        self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
+        self.model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
         self.model = self.model.to(self.args.device)
 
 
@@ -142,7 +143,7 @@ class BartFineTuner(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             #sentence = self.preprocessor.encode_sentence(sentence)
-            text = sentence
+            text = "simplify: " + sentence
             encoding = self.tokenizer(
             [text],
             max_length = 256,
@@ -158,7 +159,7 @@ class BartFineTuner(pl.LightningModule):
                 attention_mask = attention_mask,
                 do_sample = True,
                 max_length = 256,
-                num_beams = 10,
+                num_beams = 8,
                 top_k = 130,
                 top_p = 0.95,
                 early_stopping = True,
@@ -254,8 +255,7 @@ class BartFineTuner(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
-      # facebook/bart-base
-      p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
+      p.add_argument('-Summarizer','--sum_model', default='t5-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
       p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
@@ -330,7 +330,7 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         source = self.inputs[index]
-        #source = "summarize: " + self.inputs[index]
+        source = "simplify: " + self.inputs[index]
         target = self.targets[index]
 
         tokenized_inputs = self.tokenizer(
@@ -441,7 +441,7 @@ def train(args):
     print("Initialize model")
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = BartFineTuner(args)
+    model = T5BaseLineFineTuned(args)
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)
