@@ -67,7 +67,7 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocSmall_BART_SumSimLoss'
+model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
 checkpoint_path = 'checkpoint-epoch=3.ckpt'
 
 # load the model
@@ -504,7 +504,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
@@ -512,9 +512,10 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 
 ### SimLoss + SumLoss ###
 # Bart: SARI: 40.46      BLEU: 2.41      FKGL: 8.38
+# T5: SARI: 40.51      BLEU: 4.96      FKGL: 8.99 
 
 ####### D_WIKI #######
-evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 # Bart: SARI: 42.57      BLEU: 12.57     FKGL: 8.85 

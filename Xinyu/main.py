@@ -8,7 +8,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 import torch
-from preprocessor import D_WIKI, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
+from preprocessor import D_WIKI,WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
 import time
 import json
 from contextlib import contextmanager
@@ -128,10 +128,8 @@ def run_training(args, dataset):
     #     train(args)
 
 ## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
-## MLO98: T5 pretrained+finetuned(simplification) on wiki-doc-small with new loss (sum_loss+sim_loss)
-## MLO96: Bart ...(same) on wiki-doc-small with new loss (Cos_sim)
-
-dataset = WIKI_DOC_Small
+## MLO98: Bart ...(same) on wiki-doc-mid (10K) original loss
+dataset = WIKI_DOC_MID
 
 args = parse_arguments()
 run_training(args, dataset)
