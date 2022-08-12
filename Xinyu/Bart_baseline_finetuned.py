@@ -61,9 +61,9 @@ class BartBaseLineFineTuned(pl.LightningModule):
         
         # Load pre-trained model and tokenizer
         self.model = BartFineTuner.load_from_checkpoint("Xinyu/experiments/exp_BART_FineTuned_WikiLarge/checkpoint-epoch=4.ckpt")
+        self.model = self.model.model.to(self.args.device)
         self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
-        self.model = self.model.to(self.args.device)
-
+        
 
         # set custom loss TRUE or FALSE
         self.args.custom_loss = True
@@ -442,7 +442,7 @@ def train(args):
     print("Initialize model")
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = BartFineTuner(args)
+    model = BartBaseLineFineTuned(args)
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

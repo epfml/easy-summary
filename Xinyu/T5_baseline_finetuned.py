@@ -61,8 +61,8 @@ class T5BaseLineFineTuned(pl.LightningModule):
         
         # Load pre-trained model and tokenizer
         self.model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.model =  self.model.model.to(self.args.device)
         self.tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
-        self.model = self.model.to(self.args.device)
 
 
         # set custom loss TRUE or FALSE

@@ -212,7 +212,7 @@ class SumSim(pl.LightningModule):
             - lambda: control the weight of the complexity loss.
             '''
             w1 = 20
-            w2 = 4
+            w2 = 0
             
 
             loss = sim_outputs.loss * w1

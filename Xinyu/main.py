@@ -133,10 +133,9 @@ def run_training(args, dataset):
 
 ## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
 ## MLO98: Bart ...(same) on wiki-doc-mid (10K) original loss
-## MLO95: Bart ...(same) on wiki-doc-small (5k) CosSim+SumSimLoss (w1=20, w2=4,lambda=10)
-## MLO97: Bart single (finetuned on WikiLarge) finetuning on wiki-doc-small
-
-dataset = WIKI_DOC_Small
+## MLO95: Bart ...(same) on wiki-doc-small -10*CosSim+20*Simloss
+## MLO96: T5 single on wiki-doc 
+dataset = WIKI_DOC
 
 args = parse_arguments()
 run_training(args, dataset)
