@@ -504,7 +504,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
@@ -515,7 +515,7 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 # T5: SARI: 40.51      BLEU: 4.96      FKGL: 8.99 
 
 ####### D_WIKI #######
-#evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 # Bart: SARI: 42.57      BLEU: 12.57     FKGL: 8.85 
