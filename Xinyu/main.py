@@ -22,10 +22,10 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from optuna.integration import PyTorchLightningPruningCallback
 #from new_model import SumSim, train
 #from Ts_BART import BartFineTuner, train
-#from T5_2 import SumSim, train
+from T5_2 import SumSim, train
 #from Bart2 import SumSim, train
 #from Bart_baseline_finetuned import BartBaseLineFineTuned, train
-from T5_baseline_finetuned import T5BaseLineFineTuned, train
+#from T5_baseline_finetuned import T5BaseLineFineTuned, train
 
 
 def parse_arguments():
@@ -42,10 +42,10 @@ def parse_arguments():
     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
 })
     #p = T5FineTuner.add_model_specific_args(p)
-    #p = SumSim.add_model_specific_args(p)
+    p = SumSim.add_model_specific_args(p)
     #p = BartFineTuner.add_model_specific_args(p)
     #p = BartBaseLineFineTuned.add_model_specific_args(p)
-    p = T5BaseLineFineTuned.add_model_specific_args(p)
+    #p = T5BaseLineFineTuned.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
     return args
@@ -132,10 +132,10 @@ def run_training(args, dataset):
     #     train(args)
 
 ## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
-## MLO98: Bart ...(same) on wiki-doc-mid (10K) original loss
-## MLO95: Bart ...(same) on wiki-doc-small -10*CosSim+20*Simloss
 ## MLO96: T5 single on wiki-doc 
-dataset = WIKI_DOC
+## MLO97: T5_2 on wiki-doc (20*sim_loss+3*sum_loss)
+## MLO95: T5_2 ...(same) on D-wiki-small -8*CosSim+20*Simloss+3*Sumloss
+dataset = D_WIKI_SMALL
 
 args = parse_arguments()
 run_training(args, dataset)

@@ -90,6 +90,7 @@ class SumSim(pl.LightningModule):
         self.simplifier = self.simplifier.model.to(self.args.device)
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
+        self.W = torch.randn((768, int(768/2)), requires_grad=True, device = self.args.device)
         # set custom loss TRUE or FALSE
         self.args.custom_loss = True
 #        self.args.learning_rate = 1e-4
@@ -124,7 +125,7 @@ class SumSim(pl.LightningModule):
         ## summarizer stage
         inputs = self.summarizer_tokenizer(
             source,
-            max_length = 512,
+            max_length = 256,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -144,6 +145,7 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
+        H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -160,18 +162,32 @@ class SumSim(pl.LightningModule):
             added_tokens = torch.tensor([18356, 10]).to(self.args.device)
             summary_ids[i] = torch.cat((added_tokens, summary_id), dim=0)[:-2]
         
-        summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
-        summary_attention_mask[summary_ids[:,:]==self.summarizer_tokenizer.pad_token_id]=0
+        ### modified loss
+        padded_summary_ids = torch.zeros((summary_ids.shape[0], 256), dtype = torch.long).fill_(self.simplifier_tokenizer.pad_token_id).to(self.args.device)
+        for i, summary_id in enumerate(summary_ids):
+            padded_summary_ids[i,:summary_id.shape[0]]=summary_id
+
+
+        summary_attention_mask = torch.ones(padded_summary_ids.shape).to(self.args.device)
+        summary_attention_mask[padded_summary_ids[:,:]==self.summarizer_tokenizer.pad_token_id]=0
             
 
         
         # forward pass
         sim_outputs  = self(
-            input_ids = summary_ids,
+            # summary_ids -> padded
+            input_ids = padded_summary_ids,
             attention_mask = summary_attention_mask,
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
+        H2 = sim_outputs.encoder_last_hidden_state
+
+        Rep1 = torch.matmul(H1, self.W)
+        Rep2 = torch.matmul(H2, self.W)
+
+        CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
+        sim_score = CosSim(Rep1, Rep2)
 
         if self.args.custom_loss:
             '''
@@ -182,16 +198,17 @@ class SumSim(pl.LightningModule):
             - lambda: control the weight of the complexity loss.
             '''
             w1 = 20
-            w2 = 1
+            w2 = 3
             
             loss = sim_outputs.loss * w1
             loss += sum_outputs.loss * w2
-            #loss += sum_outputs.loss
+            lambda_ = 8
+            loss += (-lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
             # self.opt.step()
             
-            self.log('train_loss', loss, on_step=True, prog_bar=True, logger=True)
+            self.log('train_loss', sim_outputs.loss, on_step=True, prog_bar=True, logger=True)
             # print(loss)
             return loss
         else:
@@ -296,6 +313,9 @@ class SumSim(pl.LightningModule):
             },
             {
                 "params": [p for n,p in model1.named_parameters()]
+            },
+            {
+                "params": self.W
             }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
@@ -353,8 +373,8 @@ class SumSim(pl.LightningModule):
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       # facebook/bart-base
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
       p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)

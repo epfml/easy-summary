@@ -21,10 +21,10 @@ from preprocessor import write_lines, yield_lines, count_line, read_lines, gener
 from easse.sari import corpus_sari
 import time
 from googletrans import Translator
-#from Bart2 import SumSim
+from Bart2 import SumSim
 #from T5_2 import SumSim
 #from T5_baseline_finetuned import T5BaseLineFineTuned
-from Bart_baseline_finetuned import BartBaseLineFineTuned
+#from Bart_baseline_finetuned import BartBaseLineFineTuned
 
 @contextmanager
 def log_stdout(filepath, mute_stdout=False):
@@ -68,20 +68,20 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocSmall_BARTSingle_finetuned'
+model_dirname = 'exp_WikiDocMid_BART'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
 checkpoint_path = 'checkpoint-epoch=4.ckpt'
 
 # load the model
-Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-model = Model.model.to(device)
-tokenizer = Model.tokenizer
+# Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+# model = Model.model.to(device)
+# tokenizer = Model.tokenizer
 
-# Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
-# summarizer = Model.summarizer.to(device)
-# simplifier = Model.simplifier.to(device)
-# summarizer_tokenizer = Model.summarizer_tokenizer
-# simplifier_tokenizer = Model.simplifier_tokenizer
+Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+summarizer = Model.summarizer.to(device)
+simplifier = Model.simplifier.to(device)
+summarizer_tokenizer = Model.summarizer_tokenizer
+simplifier_tokenizer = Model.simplifier_tokenizer
 # translator = Translator()
 
 def generate_single(sentence, preprocessor = None):
@@ -292,8 +292,8 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        output_sents = generate_single(complex_sent, preprocessor = None)
-        #output_sents = generate(complex_sent, preprocessor=None)
+        #output_sents = generate_single(complex_sent, preprocessor = None)
+        output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
         #output_sents = back_translation(output_sents)
@@ -536,9 +536,13 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
+####### wiki-doc-small #######
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
 # T5: SARI: 40.04      BLEU: 2.55      FKGL: 7.73 
 # T5 single: SARI: 40.69      BLEU: 4.71      FKGL: 10.02
+
+####### wiki-doc-mid #######
+# Bart: SARI: 41.03      BLEU: 5.93      FKGL: 9.32
 
 ### SimLoss + SumLoss ###
 # Bart: SARI: 40.46      BLEU: 2.41      FKGL: 8.38
