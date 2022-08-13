@@ -214,7 +214,7 @@ class SumSim(pl.LightningModule):
             
             loss = sim_outputs.loss * w1
             loss += sum_outputs.loss * w2
-            lambda_ = 8
+            lambda_ = 6
             loss += (-lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
@@ -328,6 +328,9 @@ class SumSim(pl.LightningModule):
             },
             {
                 "params": self.W
+            },
+            {
+                "params": self.W2
             }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)

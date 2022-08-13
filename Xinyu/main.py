@@ -135,7 +135,7 @@ def run_training(args, dataset):
 ## MLO96: T5 single on wiki-doc 
 ## MLO97: T5_2 on wiki-doc (20*sim_loss+3*sum_loss)
 ## MLO95: T5_2 ...(same) on D-wiki-small -8*CosSim+20*Simloss+3*Sumloss
-## MLO97:
+## MLO97: T5_2 ...(same) on D-wiki-small -6*CosSim(MLP)+20*Simloss+3*Sumloss
 dataset = D_WIKI_SMALL
 
 args = parse_arguments()
