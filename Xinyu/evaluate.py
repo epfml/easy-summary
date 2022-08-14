@@ -20,6 +20,7 @@ from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DI
 from preprocessor import write_lines, yield_lines, count_line, read_lines, generate_hash
 from easse.sari import corpus_sari
 import time
+from utils.D_SARI import D_SARIsent
 from googletrans import Translator
 #from Bart2 import SumSim
 #from T5_2 import SumSim

@@ -1,9 +1,9 @@
 # -- fix path --
+from __future__ import division
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 # -- end fix path --
-from __future__ import division
 
 from collections import Counter
 import sys
@@ -321,5 +321,5 @@ def main():
     print(D_SARIsent(ssent, csent3, rsents))
     print(D_SARIsent(ssent, csent4, rsents))
     
-# if __name__ == '__main__':
-#     main()
+if __name__ == '__main__':
+    main()
