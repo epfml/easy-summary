@@ -21,9 +21,9 @@ from preprocessor import write_lines, yield_lines, count_line, read_lines, gener
 from easse.sari import corpus_sari
 import time
 from googletrans import Translator
-from Bart2 import SumSim
+#from Bart2 import SumSim
 #from T5_2 import SumSim
-#from T5_baseline_finetuned import T5BaseLineFineTuned
+from T5_baseline_finetuned import T5BaseLineFineTuned
 #from Bart_baseline_finetuned import BartBaseLineFineTuned
 
 @contextmanager
@@ -68,25 +68,25 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocMid_BART'
+model_dirname = 'exp_WikiDoc_T5Single_finetuned'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=4.ckpt'
+checkpoint_path = 'checkpoint-epoch=3.ckpt'
 
 # load the model
-# Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-# model = Model.model.to(device)
-# tokenizer = Model.tokenizer
+Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+model = Model.model.to(device)
+tokenizer = Model.tokenizer
 
-Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
-summarizer = Model.summarizer.to(device)
-simplifier = Model.simplifier.to(device)
-summarizer_tokenizer = Model.summarizer_tokenizer
-simplifier_tokenizer = Model.simplifier_tokenizer
+# Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+# summarizer = Model.summarizer.to(device)
+# simplifier = Model.simplifier.to(device)
+# summarizer_tokenizer = Model.summarizer_tokenizer
+# simplifier_tokenizer = Model.simplifier_tokenizer
 # translator = Translator()
 
 def generate_single(sentence, preprocessor = None):
     
-    #text = "simplify: " + sentence
+    text = "simplify: " + sentence
     encoding = tokenizer(text, max_length=256,
                                      padding='max_length',
                                      truncation=True,
@@ -117,7 +117,7 @@ def generate(sentence, preprocessor=None):
 
     
     # For T5
-    #sentence = 'summarize ' + sentence
+    sentence = 'summarize ' + sentence
 
     encoding = summarizer_tokenizer(
         [sentence],
@@ -135,9 +135,9 @@ def generate(sentence, preprocessor=None):
     ).to(device)
     
     # For T5
-    # for i, summary_id in enumerate(summary_ids):
-    #     add_tokens = torch.tensor([18356, 10]).to(device)
-    #     summary_ids[i,:] = torch.cat((summary_id, add_tokens), dim=0)[:-2]
+    for i, summary_id in enumerate(summary_ids):
+        add_tokens = torch.tensor([18356, 10]).to(device)
+        summary_ids[i,:] = torch.cat((summary_id, add_tokens), dim=0)[:-2]
     
     summary_atten_mask = torch.ones(summary_ids.shape).to(device)
     summary_atten_mask[summary_ids[:,:] == summarizer_tokenizer.pad_token_id] = 0
@@ -292,8 +292,8 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        #output_sents = generate_single(complex_sent, preprocessor = None)
-        output_sents = generate(complex_sent, preprocessor=None)
+        output_sents = generate_single(complex_sent, preprocessor = None)
+        #output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
         #output_sents = back_translation(output_sents)
@@ -536,17 +536,23 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
+####### wiki-doc whole #######
+# T5 single (original loss): SARI: 41.74      BLEU: 8.04      FKGL: 9.92 
+
 ####### wiki-doc-small #######
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
 # T5: SARI: 40.04      BLEU: 2.55      FKGL: 7.73 
 # T5 single: SARI: 40.69      BLEU: 4.71      FKGL: 10.02
 
-####### wiki-doc-mid #######
-# Bart: SARI: 41.03      BLEU: 5.93      FKGL: 9.32
-
 ### SimLoss + SumLoss ###
 # Bart: SARI: 40.46      BLEU: 2.41      FKGL: 8.38
 # T5: SARI: 40.51      BLEU: 4.96      FKGL: 8.99 
+
+####### wiki-doc-mid #######
+# Bart: SARI: 41.03      BLEU: 5.93      FKGL: 9.32
+
+####### D_wiki_small #######
+# T5 -8CosSim+20SimLoss+3SumLoss: SARI: 44.14      BLEU: 22.12     FKGL: 9.09 
 
 ####### D_WIKI #######
 #evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
@@ -556,7 +562,7 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 # T5: SARI: 43.35      BLEU: 11.32     FKGL: 8.73
 
 ### SimLoss + SumLoss ###
-# Bart:: SARI: 42.75      BLEU: 7.66      FKGL: 8.02 
+# Bart: SARI: 42.75      BLEU: 7.66      FKGL: 8.02 
 
 # evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
 #                     phase='test', ratio = 0.7,

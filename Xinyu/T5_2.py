@@ -93,7 +93,7 @@ class SumSim(pl.LightningModule):
         
         self.W = torch.randn((768, self.args.hidden_size), requires_grad=True, device = self.args.device)
         self.relu = nn.ReLU()
-        self.W2 = torch.randn((self.args.hidden_size, 768), requires_grad=True, device = self.args.device)
+        #self.W2 = torch.randn((self.args.hidden_size, 768), requires_grad=True, device = self.args.device)
         # set custom loss TRUE or FALSE
         self.args.custom_loss = True
 #        self.args.learning_rate = 1e-4
@@ -190,13 +190,13 @@ class SumSim(pl.LightningModule):
         Rep2 = torch.matmul(H2, self.W)
         
         ### MLP
-        Rep1 = self.relu(Rep1)
-        Rep2 = self.relu(Rep2)
+        # Rep1 = self.relu(Rep1)
+        # Rep2 = self.relu(Rep2)
         
-        Rep1 = torch.matmul(Rep1, self.W2)
-        Rep2 = torch.matmul(Rep2, self.W2)
-        Rep1 = self.relu(Rep1)
-        Rep2 = self.relu(Rep2)
+        # Rep1 = torch.matmul(Rep1, self.W2)
+        # Rep2 = torch.matmul(Rep2, self.W2)
+        # Rep1 = self.relu(Rep1)
+        # Rep2 = self.relu(Rep2)
 
         CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
         sim_score = CosSim(Rep1, Rep2)
@@ -214,7 +214,7 @@ class SumSim(pl.LightningModule):
             
             loss = sim_outputs.loss * w1
             loss += sum_outputs.loss * w2
-            lambda_ = 6
+            lambda_ = 8
             loss += (-lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
@@ -247,7 +247,7 @@ class SumSim(pl.LightningModule):
             # summarize the document
             inputs = self.summarizer_tokenizer(
             [text],
-            max_length = 512,
+            max_length = 256,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -329,9 +329,9 @@ class SumSim(pl.LightningModule):
             {
                 "params": self.W
             },
-            {
-                "params": self.W2
-            }
+            # {
+            #     "params": self.W2
+            # }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         self.opt = optimizer
@@ -385,13 +385,12 @@ class SumSim(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      p.add_argument('-HiddenSize','--hidden_size',type=int, default = int(768/2))
+      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 768)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
-      # facebook/bart-base
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
+      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.001)

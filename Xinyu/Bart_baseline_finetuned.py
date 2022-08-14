@@ -159,7 +159,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
                 attention_mask = attention_mask,
                 do_sample = True,
                 max_length = 256,
-                num_beams = 8,
+                num_beams = 10,
                 top_k = 130,
                 top_p = 0.95,
                 early_stopping = True,
@@ -259,7 +259,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
       p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.001)

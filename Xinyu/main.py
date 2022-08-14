@@ -15,7 +15,7 @@ from contextlib import contextmanager
 #from Ts_T5 import train
 import optuna
 import argparse
-from Ts_T5 import T5FineTuner
+#from Ts_T5 import T5FineTuner, train
 from argparse import ArgumentParser
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
@@ -132,10 +132,11 @@ def run_training(args, dataset):
     #     train(args)
 
 ## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
-## MLO96: T5 single on wiki-doc 
 ## MLO97: T5_2 on wiki-doc (20*sim_loss+3*sum_loss)
-## MLO95: T5_2 ...(same) on D-wiki-small -8*CosSim+20*Simloss+3*Sumloss
-## MLO97: T5_2 ...(same) on D-wiki-small -6*CosSim(MLP)+20*Simloss+3*Sumloss
+## MLO98: T5_2 ...(same) on wiki-doc-mid -4*CosSim+20*Simloss+3*Sumloss
+## MLO95: finetune T5 on wikiLarge
+## MLO96: Bart single (finetuned) on wiki-doc
+## MLO95: T5_2 ...(same) on D-wiki-small 768hidden (not try)
 dataset = D_WIKI_SMALL
 
 args = parse_arguments()

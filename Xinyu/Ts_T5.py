@@ -57,8 +57,6 @@ class T5FineTuner(pl.LightningModule):
         self.tokenizer = T5TokenizerFast.from_pretrained(self.args.model_name)
         self.model = self.model.to(self.device)
         self.preprocessor = load_preprocessor()
-        # set custom loss TRUE or FALSE
-        self.args.custom_loss = True
 #        self.args.learning_rate = 1e-4
         self.args.num_train_epochs = 10
 
@@ -183,7 +181,7 @@ class T5FineTuner(pl.LightningModule):
         print("Val_loss", loss)
         logs = {"val_loss": loss}
 
-        self.log('val_loss', loss)
+        self.log('val_loss', loss, batch_size = self.args.valid_batch_size)
         return torch.tensor(loss, dtype=float)
 
     def sari_validation_step(self, batch):
@@ -305,15 +303,15 @@ class T5FineTuner(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-m','--model_name', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
+      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=10)
-      p.add_argument('-CosLoss','--custom_loss', default=True)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=5)
+      p.add_argument('-CosLoss','--custom_loss', default=False)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
@@ -484,8 +482,8 @@ def train(args):
     )
 
     print("Initialize model")
-    #model = T5FineTuner(args)
-    model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilargeF_0_0/checkpoint-epoch=2.ckpt')
+    model = T5FineTuner(args)
+    #model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilargeF_0_0/checkpoint-epoch=2.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

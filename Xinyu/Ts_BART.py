@@ -57,7 +57,6 @@ class BartFineTuner(pl.LightningModule):
         super(BartFineTuner, self).__init__()
         self.args = args
         self.save_hyperparameters()
-        #self.tokenizer = T5TokenizerFast.from_pretrained('t5-base')
         # Load pre-trained model and tokenizer
         self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
         self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
