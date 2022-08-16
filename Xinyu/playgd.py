@@ -64,12 +64,13 @@ sum_outputs = model(
     input_ids = src_ids,
     attention_mask = src_mask,
     labels = labels,
-    decoder_attention_mask = decoder_attention_mask
+    decoder_attention_mask = decoder_attention_mask,
+    output_hidden_states = True
 )
 
 # (1, 256, 768)
-print(sum_outputs.encoder_last_hidden_state.shape)
-
+print(sum_outputs.encoder_last_hidden_state)
+#print(sum_outputs.decoder_hidden_states[1].shape)
 
 summary_ids = model.generate(
     src_ids,
@@ -79,7 +80,7 @@ summary_ids = model.generate(
 
 # (1,98)
 print(summary_ids)
-print(summary_ids.shape[1])
+print(summary_ids.shape)
 
 padded_summary_ids = torch.zeros((summary_ids.shape[0], 256), dtype = torch.long).fill_(tokenizer.pad_token_id).to(device)
 
@@ -114,20 +115,23 @@ outputs = model(
     input_ids = padded_summary_ids,
     attention_mask = attention_mask,
     labels = labels,
-    decoder_attention_mask = decoder_attention_mask
+    decoder_attention_mask = decoder_attention_mask,
+    output_hidden_states = True
 )
 # (1,98,768)
-print(outputs.encoder_last_hidden_state.shape)
+print(outputs.encoder_last_hidden_state)
+#print(outputs.decoder_hidden_states[1].shape)
 
-W = torch.randn((768, int(768/2)), requires_grad=True).to(device)
 
-r1 = torch.matmul(sum_outputs.encoder_last_hidden_state, W)
-print(r1.shape)
-r2 = torch.matmul(outputs.encoder_last_hidden_state, W)
-print(r2.shape)
+# W = torch.randn((768, int(768/2)), requires_grad=True).to(device)
 
-sim = nn.CosineSimilarity(dim=2, eps=1e-6)
-score = sim(r1,r2)
+# r1 = torch.matmul(sum_outputs.encoder_last_hidden_state, W)
+# print(r1.shape)
+# r2 = torch.matmul(outputs.encoder_last_hidden_state, W)
+# print(r2.shape)
 
-print(score.mean(dim = 1))
+# sim = nn.CosineSimilarity(dim=2, eps=1e-6)
+# score = sim(r1,r2)
+
+# print(score.mean(dim = 1))
 

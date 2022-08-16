@@ -14,7 +14,7 @@ from easse.utils.constants import (
     DEFAULT_METRICS,
 )
 from easse.utils.resources import get_orig_sents, get_refs_sents
-from utils.D_SARI import D_SARIsent
+from utils.D_SARI import D_SARIsent, D_SARI_file
 #from easse.report import write_html_report, write_multiple_systems_html_report
 
 
@@ -189,12 +189,13 @@ def evaluate_system_output(
             lowercase=lowercase,
         )
     if "D-sari" in metrics:
-        metrics_scores['D-sari'] = D_SARIsent(
+        # print(type(orig_sents))
+        print(len(sys_sents))
+        #print((refs_sents[0][0]))
+        metrics_scores['D-sari'] = D_SARI_file(
             orig_sents,
             sys_sents,
-            refs_sents,
-            tokenizer=tokenizer,
-            lowercase=lowercase,
+            refs_sents[0],
         )
 
     if "sari_legacy" in metrics:

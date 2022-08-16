@@ -23,8 +23,8 @@ import time
 from utils.D_SARI import D_SARIsent
 from googletrans import Translator
 #from Bart2 import SumSim
-#from T5_2 import SumSim
-from T5_baseline_finetuned import T5BaseLineFineTuned
+from T5_2 import SumSim
+#from T5_baseline_finetuned import T5BaseLineFineTuned
 #from Bart_baseline_finetuned import BartBaseLineFineTuned
 
 @contextmanager
@@ -69,20 +69,20 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDoc_T5Single_finetuned'
+model_dirname = 'exp_WikiDocMid_T5_10CosSim20Sim3Sum_768Hidden'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=3.ckpt'
+checkpoint_path = 'checkpoint-epoch=2.ckpt'
 
 # load the model
-Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-model = Model.model.to(device)
-tokenizer = Model.tokenizer
+# Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+# model = Model.model.to(device)
+# tokenizer = Model.tokenizer
 
-# Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
-# summarizer = Model.summarizer.to(device)
-# simplifier = Model.simplifier.to(device)
-# summarizer_tokenizer = Model.summarizer_tokenizer
-# simplifier_tokenizer = Model.simplifier_tokenizer
+Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+summarizer = Model.summarizer.to(device)
+simplifier = Model.simplifier.to(device)
+summarizer_tokenizer = Model.summarizer_tokenizer
+simplifier_tokenizer = Model.simplifier_tokenizer
 # translator = Translator()
 
 def generate_single(sentence, preprocessor = None):
@@ -293,8 +293,8 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        output_sents = generate_single(complex_sent, preprocessor = None)
-        #output_sents = generate(complex_sent, preprocessor=None)
+        #output_sents = generate_single(complex_sent, preprocessor = None)
+        output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
         #output_sents = back_translation(output_sents)
@@ -464,7 +464,7 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
             #     print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
             # if "DependencyTreeDepthRatioFeature" in features_kwargs:
             #     print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
-            print("SARI: {:.2f} \t BLEU: {:.2f} \t FKGL: {:.2f} ".format(scores['sari'], scores['bleu'], scores['fkgl']))
+            print("SARI: {:.2f}\t D-SARI: {:.2f} \t BLEU: {:.2f} \t FKGL: {:.2f} ".format(scores['sari'], scores['D-sari'], scores['bleu'], scores['fkgl']))
             # print("{:.2f} \t {:.2f} \t {:.2f} ".format(scores['SARI'], scores['BLEU'], scores['FKGL']))
 
             print("Execution time: --- %s seconds ---" % (time.time() - start_time))
@@ -514,7 +514,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
             #     print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
             # if "DependencyTreeDepthRatioFeature" in features_kwargs:
             #     print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
-            print("SARI: {:.2f} \t BLEU: {:.2f} \t FKGL: {:.2f} ".format(scores['sari'], scores['bleu'], scores['fkgl']))
+            print("SARI: {:.2f}\t D-SARI: {:.2f} \t BLEU: {:.2f} \t FKGL: {:.2f} ".format(scores['sari'], scores['D-sari'], scores['bleu'], scores['fkgl']))
             # print("{:.2f} \t {:.2f} \t {:.2f} ".format(scores['SARI'], scores['BLEU'], scores['FKGL']))
 
             print("Execution time: --- %s seconds ---" % (time.time() - start_time))
@@ -552,11 +552,12 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 ####### wiki-doc-mid #######
 # Bart: SARI: 41.03      BLEU: 5.93      FKGL: 9.32
 
-####### D_wiki_small #######
-# T5 -8CosSim+20SimLoss+3SumLoss: SARI: 44.14      BLEU: 22.12     FKGL: 9.09 
 
 ####### D_WIKI #######
 #evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+
+####### D_wiki_small #######
+# T5 -8CosSim+20SimLoss+3SumLoss: SARI: 44.14      BLEU: 22.12     FKGL: 9.09 
 
 ### Original loss function ###
 # Bart: SARI: 42.57      BLEU: 12.57     FKGL: 8.85 

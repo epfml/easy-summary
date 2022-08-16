@@ -132,12 +132,12 @@ def run_training(args, dataset):
     #     train(args)
 
 ## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
-## MLO97: T5_2 on wiki-doc (20*sim_loss+3*sum_loss)
-## MLO98: T5_2 ...(same) on wiki-doc-mid -4*CosSim+20*Simloss+3*Sumloss
-## MLO95: finetune T5 on wikiLarge
+## MLO96 (exited): Bart single (finetuned) on wiki-doc Xinyu/experiments/exp_1660459472819581
 ## MLO96: Bart single (finetuned) on wiki-doc
-## MLO95: T5_2 ...(same) on D-wiki-small 768hidden (not try)
-dataset = D_WIKI_SMALL
+## MLO95: T5_2 on D-wiki-small  20*sim_loss+3*sum_loss
+## MLO98: T5_2 on D-wiki-small  20*sim_loss+1*sim_loss 
+## MLO97: T5_2 on wiki-doc (20*sim_loss+1*sum_loss)
+dataset = WIKI_DOC
 
 args = parse_arguments()
 run_training(args, dataset)

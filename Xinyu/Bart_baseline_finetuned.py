@@ -442,7 +442,9 @@ def train(args):
     print("Initialize model")
     #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = BartBaseLineFineTuned(args)
+    #model = BartBaseLineFineTuned(args)
+    model = BartBaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1660459472819581/checkpoint-epoch=1.ckpt')
+    
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

@@ -306,6 +306,12 @@ def D_SARIsent(ssent, csent, rsents):
 
     return finalscore, avgkeepscore, avgdelscore, avgaddscore
 
+def D_SARI_file(ssent, csent, rsents):
+    D_SARI = 0
+    for st, ct, rt in zip(ssent, csent, rsents):
+        D_SARI += D_SARIsent(st, ct, [rt])[0]
+    return D_SARI / len(ssent)
+
 def main():
 
     ssent = "marengo is a town in and the county seat of iowa county , iowa , united states . it has served as the county seat since august 1845 , even though it was not incorporated until july 1859 . the population was 2,528 in the 2010 census , a decline from 2,535 in 2000 ."

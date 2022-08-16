@@ -86,12 +86,12 @@ class SumSim(pl.LightningModule):
         self.summarizer_tokenizer = T5TokenizerFast.from_pretrained(self.args.sum_model)
         self.summarizer = self.summarizer.to(self.args.device)
 
-        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_T5_FineTuned_WikiLarge/checkpoint-epoch=2.ckpt')
         self.simplifier = self.simplifier.model.to(self.args.device)
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
         
-        self.W = torch.randn((768, self.args.hidden_size), requires_grad=True, device = self.args.device)
+        self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
         self.relu = nn.ReLU()
         #self.W2 = torch.randn((self.args.hidden_size, 768), requires_grad=True, device = self.args.device)
         # set custom loss TRUE or FALSE
@@ -148,7 +148,7 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        H1 = sum_outputs.encoder_last_hidden_state
+        # H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -184,10 +184,10 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        H2 = sim_outputs.encoder_last_hidden_state
+        # H2 = sim_outputs.encoder_last_hidden_state
 
-        Rep1 = torch.matmul(H1, self.W)
-        Rep2 = torch.matmul(H2, self.W)
+        # Rep1 = torch.matmul(H1, self.W)
+        # Rep2 = torch.matmul(H2, self.W)
         
         ### MLP
         # Rep1 = self.relu(Rep1)
@@ -198,8 +198,8 @@ class SumSim(pl.LightningModule):
         # Rep1 = self.relu(Rep1)
         # Rep2 = self.relu(Rep2)
 
-        CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
-        sim_score = CosSim(Rep1, Rep2)
+        # CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
+        # sim_score = CosSim(Rep1, Rep2)
 
         if self.args.custom_loss:
             '''
@@ -209,13 +209,11 @@ class SumSim(pl.LightningModule):
             - ratio: control the ratio of sentences we want to compute complexity for training.
             - lambda: control the weight of the complexity loss.
             '''
-            w1 = 20
-            w2 = 3
             
-            loss = sim_outputs.loss * w1
-            loss += sum_outputs.loss * w2
-            lambda_ = 8
-            loss += (-lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
+            loss = sim_outputs.loss * self.args.w1
+            loss += sum_outputs.loss * self.args.w2
+            # lambda_ = 6
+            # loss += (-lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
             # self.opt.step()
@@ -385,7 +383,9 @@ class SumSim(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 768)
+      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 768/2)
+      p.add_argument('-Weight1', '--w1', type = int, default = 20)
+      p.add_argument('-Weight2', '--w2', type = int, default = 1)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
