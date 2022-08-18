@@ -69,12 +69,12 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocMid_T5_10CosSim20Sim3Sum_768Hidden'
+model_dirname = 'exp_1660767530377712'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=2.ckpt'
+checkpoint_path = 'checkpoint-epoch=0.ckpt'
 
 # load the model
-# Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+# Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
 # model = Model.model.to(device)
 # tokenizer = Model.tokenizer
 
@@ -87,7 +87,8 @@ simplifier_tokenizer = Model.simplifier_tokenizer
 
 def generate_single(sentence, preprocessor = None):
     
-    text = "simplify: " + sentence
+    #text = "simplify: " + sentence
+    text = sentence
     encoding = tokenizer(text, max_length=256,
                                      padding='max_length',
                                      truncation=True,
@@ -534,11 +535,12 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 ####### wiki-doc whole #######
 # T5 single (original loss): SARI: 41.74      BLEU: 8.04      FKGL: 9.92 
+# BART single (original loss): SARI: 40.84     D-SARI: 0.40    BLEU: 3.83      FKGL: 9.12 
 
 ####### wiki-doc-small #######
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
@@ -550,21 +552,25 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 # T5: SARI: 40.51      BLEU: 4.96      FKGL: 8.99 
 
 ####### wiki-doc-mid #######
-# Bart: SARI: 41.03      BLEU: 5.93      FKGL: 9.32
+# Bart (original loss) : SARI: 41.03      BLEU: 5.93      FKGL: 9.32
 
 
 ####### D_WIKI #######
-#evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
-####### D_wiki_small #######
+
+####### trained on D_wiki_small #######
 # T5 -8CosSim+20SimLoss+3SumLoss: SARI: 44.14      BLEU: 22.12     FKGL: 9.09 
+# T5 -6CosSim+20SimLoss+1SumLoss: SARI: 45.80      D-SARI: 0.34    BLEU: 19.11     FKGL: 8.37 
+# T5          50SimLoss+1SumLoss: SARI: 45.12      D-SARI: 0.34    BLEU: 20.96     FKGL: 8.61
+# T5 -10CosSim+50SimLoss+1SumLoss: SARI: 45.14      D-SARI: 0.34    BLEU: 19.92     FKGL: 8.50 
 
 ### Original loss function ###
-# Bart: SARI: 42.57      BLEU: 12.57     FKGL: 8.85 
-# T5: SARI: 43.35      BLEU: 11.32     FKGL: 8.73
+# Bart (trained on wiki-doc-small): SARI: 42.57      BLEU: 12.57     FKGL: 8.85 
+# T5 (trained on wiki-doc-small): SARI: 43.35      BLEU: 11.32     FKGL: 8.73
 
 ### SimLoss + SumLoss ###
-# Bart: SARI: 42.75      BLEU: 7.66      FKGL: 8.02 
+# Bart (trained on wiki-doc-small): SARI: 42.75      BLEU: 7.66      FKGL: 8.02 
 
 # evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
 #                     phase='test', ratio = 0.7,
@@ -617,30 +623,7 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 ######## 60 0.3*prob mean wikilargeF ###############
 # C: 0.98         L: 0.72         WR: 0.9         DTD: 0.74       SARI: 42.93      BLEU: 68.01     FKGL: 6.88 
 
-######## 60 0.5*prob mean wikilargeF ###############
-# C: 0.97         L: 0.77         WR: 0.9         DTD: 0.74       SARI: 42.94      BLEU: 70.23     FKGL: 7.44 
 
-######## paraghF oldloss ############
-# C: 0.98   L: 0.73     WR: 0.8     DTD: 0.72   SARI: 43.76      BLEU: 67.86     FKGL: 6.85 
-
-######## paraghF 20 0.3prob mean ############
-# C: 0.98         L: 0.73         WR: 0.8         DTD: 0.72       SARI: 43.76      BLEU: 67.86     FKGL: 6.85 
-
-######## paraghF 20 0.3prob max ############
-# C: 0.98   L: 0.73     WR: 0.92    DTD: 0.72   SARI: 43.69      BLEU: 68.19     FKGL: 6.83 
-
-####### paraghF 60 0.3prob mean #############
-# C: 0.98         L: 0.73         WR: 0.8         DTD: 0.72       SARI: 43.76      BLEU: 67.86     FKGL: 6.85
-
-####### paraghF 60 0.3prob max #############
-# C: 0.96   L: 0.77     WR: 0.92    DTD: 0.74   SARI: 42.78      BLEU: 67.35     FKGL: 7.35
-
-####### paraghF 60 0.5prob mean #############
-# from wikiparaghF_0_0
-# C: 0.97         L: 0.72         WR: 0.8         DTD: 0.72       SARI: 43.47      BLEU: 65.14     FKGL: 6.81 
-
-# from wikilargeF_0_0
-# C: 0.98         L: 0.73         WR: 0.8         DTD: 0.72       SARI: 43.76      BLEU: 67.86     FKGL: 6.85
 
 
 ###### ASSET #############

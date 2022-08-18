@@ -36,7 +36,8 @@ from transformers import (
     T5TokenizerFast,
     BertTokenizer, BertForPreTraining,
     BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
-    get_linear_schedule_with_warmup, AutoConfig, AutoModel
+    get_linear_schedule_with_warmup, AutoConfig, AutoModel,
+    get_cosine_schedule_with_warmup,
 )
 from Ts_T5 import T5FineTuner
 
@@ -93,9 +94,8 @@ class SumSim(pl.LightningModule):
         
         self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
         self.relu = nn.ReLU()
-        #self.W2 = torch.randn((self.args.hidden_size, 768), requires_grad=True, device = self.args.device)
-        # set custom loss TRUE or FALSE
-        self.args.custom_loss = True
+#        self.W2 = torch.randn((int(self.args.hidden_size), int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        
 #        self.args.learning_rate = 1e-4
 
 
@@ -148,7 +148,7 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        # H1 = sum_outputs.encoder_last_hidden_state
+        H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -184,22 +184,22 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        # H2 = sim_outputs.encoder_last_hidden_state
+        H2 = sim_outputs.encoder_last_hidden_state
 
-        # Rep1 = torch.matmul(H1, self.W)
-        # Rep2 = torch.matmul(H2, self.W)
+        Rep1 = torch.matmul(H1, self.W)
+        Rep2 = torch.matmul(H2, self.W)
         
         ### MLP
-        # Rep1 = self.relu(Rep1)
-        # Rep2 = self.relu(Rep2)
+        Rep1 = self.relu(Rep1)
+        Rep2 = self.relu(Rep2)
         
         # Rep1 = torch.matmul(Rep1, self.W2)
         # Rep2 = torch.matmul(Rep2, self.W2)
         # Rep1 = self.relu(Rep1)
         # Rep2 = self.relu(Rep2)
 
-        # CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
-        # sim_score = CosSim(Rep1, Rep2)
+        CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
+        sim_score = CosSim(Rep1, Rep2)
 
         if self.args.custom_loss:
             '''
@@ -212,8 +212,7 @@ class SumSim(pl.LightningModule):
             
             loss = sim_outputs.loss * self.args.w1
             loss += sum_outputs.loss * self.args.w2
-            # lambda_ = 6
-            # loss += (-lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
+            loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
             # self.opt.step()
@@ -366,7 +365,10 @@ class SumSim(pl.LightningModule):
                    // self.args.gradient_accumulation_steps
                    * float(self.args.num_train_epochs)
                    )
-        scheduler = get_linear_schedule_with_warmup(
+        # scheduler = get_linear_schedule_with_warmup(
+        #     self.opt, num_warmup_steps=self.args.warmup_steps, num_training_steps=t_total
+        # )
+        scheduler = get_cosine_schedule_with_warmup(
             self.opt, num_warmup_steps=self.args.warmup_steps, num_training_steps=t_total
         )
         self.lr_scheduler = scheduler
@@ -386,6 +388,7 @@ class SumSim(pl.LightningModule):
       p.add_argument('-HiddenSize','--hidden_size',type=int, default = 768/2)
       p.add_argument('-Weight1', '--w1', type = int, default = 20)
       p.add_argument('-Weight2', '--w2', type = int, default = 1)
+      p.add_argument('-Lambda', '--lambda_', type = int, default = 6)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
@@ -402,7 +405,7 @@ class SumSim(pl.LightningModule):
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
-      p.add_argument('-device','--device', default = 'cuda')
+      p.add_argument('-device','--device', default = 'cuda:0')
       #p.add_argument('-NumBeams','--num_beams', default=8)
       return p
 
@@ -572,8 +575,9 @@ def train(args):
 
     print("Initialize model")
     #model = T5FineTuner(args)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SumSim(args).to(device)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    torch.cuda.set_device(0)
+    model = SumSim(args)#.to(device)
     #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
