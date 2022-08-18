@@ -137,10 +137,11 @@ def run_training(args, dataset):
      ## MLO95: T5_2 on D-wiki-small  50*sim_loss+1*sum_loss (0.55163) -- stop
 ## MLO96: T5_2 on wiki-doc original loss
      ## MLO95: T5_2 on D-wiki-small 50*sim_loss+1*sum_loss-10CosSim(ReLU(W ReLU(WH))) (0.55887) -- stop
-## MLO95: T5_2 on D-wiki-small  50*sim_loss+1*sum_loss-10CosSim(ReLu(WH))
+## MLO95: T5_2 on D-wiki-small  50*sim_loss+1*sum_loss-10CosSim(ReLu(WH)) --- stop
 ## MLO98: T5_2 D_wiki (whole) original loss
-## MLO97: T5_2 on D-wiki-small  20*sim_loss+1*sum_loss-6CosSim(ReLU)
-dataset = D_WIKI_SMALL
+## MLO95: T5_2 on D-wiki-small  20*sim_loss+1*sum_loss-6CosSim(ReLU)
+## MLO97: T5_2 D_wiki 20*sim_loss+1*sum_loss
+dataset = D_WIKI
 
 args = parse_arguments()
 run_training(args, dataset)

@@ -92,8 +92,8 @@ class SumSim(pl.LightningModule):
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
         
-        self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
-        self.relu = nn.ReLU()
+        # self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        # self.relu = nn.ReLU()
 #        self.W2 = torch.randn((int(self.args.hidden_size), int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
         
 #        self.args.learning_rate = 1e-4
@@ -132,7 +132,7 @@ class SumSim(pl.LightningModule):
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
-        ).to(self.args.device)
+        )#.to(self.args.device)
 
         
         src_ids = inputs['input_ids'].to(self.args.device)
@@ -148,7 +148,7 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        H1 = sum_outputs.encoder_last_hidden_state
+        #H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -184,22 +184,22 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        H2 = sim_outputs.encoder_last_hidden_state
+        #H2 = sim_outputs.encoder_last_hidden_state
 
-        Rep1 = torch.matmul(H1, self.W)
-        Rep2 = torch.matmul(H2, self.W)
+        # Rep1 = torch.matmul(H1, self.W)
+        # Rep2 = torch.matmul(H2, self.W)
         
-        ### MLP
-        Rep1 = self.relu(Rep1)
-        Rep2 = self.relu(Rep2)
+        # ### MLP
+        # Rep1 = self.relu(Rep1)
+        # Rep2 = self.relu(Rep2)
         
         # Rep1 = torch.matmul(Rep1, self.W2)
         # Rep2 = torch.matmul(Rep2, self.W2)
         # Rep1 = self.relu(Rep1)
         # Rep2 = self.relu(Rep2)
 
-        CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
-        sim_score = CosSim(Rep1, Rep2)
+        # CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
+        # sim_score = CosSim(Rep1, Rep2)
 
         if self.args.custom_loss:
             '''
@@ -212,7 +212,7 @@ class SumSim(pl.LightningModule):
             
             loss = sim_outputs.loss * self.args.w1
             loss += sum_outputs.loss * self.args.w2
-            loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
+            #loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
             # self.opt.step()
@@ -323,9 +323,9 @@ class SumSim(pl.LightningModule):
             {
                 "params": [p for n,p in model1.named_parameters()]
             },
-            {
-                "params": self.W
-            },
+            # {
+            #     "params": self.W
+            # },
             # {
             #     "params": self.W2
             # }
