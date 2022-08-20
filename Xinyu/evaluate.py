@@ -23,9 +23,12 @@ import time
 from utils.D_SARI import D_SARIsent
 from googletrans import Translator
 #from Bart2 import SumSim
-from T5_2 import SumSim
-#from T5_baseline_finetuned import T5BaseLineFineTuned
+#from T5_2 import SumSim
+from T5_baseline_finetuned import T5BaseLineFineTuned
 #from Bart_baseline_finetuned import BartBaseLineFineTuned
+
+from keybert import KeyBERT
+kw_model = KeyBERT()
 
 @contextmanager
 def log_stdout(filepath, mute_stdout=False):
@@ -69,25 +72,30 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_1660767530377712'
+model_dirname = 'exp_WikiDocSmall_T5Single_keyword_finetuned_'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=0.ckpt'
+checkpoint_path = 'checkpoint-epoch=4.ckpt'
 
 # load the model
-# Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-# model = Model.model.to(device)
-# tokenizer = Model.tokenizer
+Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+model = Model.model.to(device)
+tokenizer = Model.tokenizer
 
-Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
-summarizer = Model.summarizer.to(device)
-simplifier = Model.simplifier.to(device)
-summarizer_tokenizer = Model.summarizer_tokenizer
-simplifier_tokenizer = Model.simplifier_tokenizer
+# Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+# summarizer = Model.summarizer.to(device)
+# simplifier = Model.simplifier.to(device)
+# summarizer_tokenizer = Model.summarizer_tokenizer
+# simplifier_tokenizer = Model.simplifier_tokenizer
 # translator = Translator()
 
 def generate_single(sentence, preprocessor = None):
     
-    #text = "simplify: " + sentence
+    ### add keyword
+    key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 2), stop_words=None)
+    for i in range(min(3, len(key_words))):
+        sentence = key_words[i][0] + " " +sentence
+    
+    text = "simplify: " + sentence
     text = sentence
     encoding = tokenizer(text, max_length=256,
                                      padding='max_length',
@@ -294,8 +302,8 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        #output_sents = generate_single(complex_sent, preprocessor = None)
-        output_sents = generate(complex_sent, preprocessor=None)
+        output_sents = generate_single(complex_sent, preprocessor = None)
+        #output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
         #output_sents = back_translation(output_sents)
@@ -535,7 +543,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 ####### wiki-doc whole #######
@@ -556,7 +564,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 
 
 ####### D_WIKI #######
-evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 
 ####### trained on D_wiki_small #######
@@ -564,6 +572,7 @@ evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirna
 # T5 -6CosSim+20SimLoss+1SumLoss: SARI: 45.80      D-SARI: 0.34    BLEU: 19.11     FKGL: 8.37 
 # T5          50SimLoss+1SumLoss: SARI: 45.12      D-SARI: 0.34    BLEU: 20.96     FKGL: 8.61
 # T5 -10CosSim+50SimLoss+1SumLoss: SARI: 45.14      D-SARI: 0.34    BLEU: 19.92     FKGL: 8.50 
+# T5 -10CosSim(ReLU)+50SimLoss+1SumLoss: SARI: 45.28      D-SARI: 0.34    BLEU: 19.64     FKGL: 8.40
 
 ### Original loss function ###
 # Bart (trained on wiki-doc-small): SARI: 42.57      BLEU: 12.57     FKGL: 8.85 

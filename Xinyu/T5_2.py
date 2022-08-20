@@ -13,7 +13,7 @@ from easse.sari import corpus_sari
 from torch.nn import functional as F
 from preprocessor import tokenize, yield_sentence_pair, yield_lines, load_preprocessor, read_lines, \
     count_line, OUTPUT_DIR, get_complexity_score, safe_division, get_word2rank, remove_stopwords, remove_punctuation
-import Levenshtein
+# import Levenshtein
 import argparse
 from argparse import ArgumentParser
 import os
@@ -40,7 +40,8 @@ from transformers import (
     get_cosine_schedule_with_warmup,
 )
 from Ts_T5 import T5FineTuner
-
+from keybert import KeyBERT
+#kw_model = KeyBERT()
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
 class MetricsCallback(pl.Callback):
@@ -92,8 +93,8 @@ class SumSim(pl.LightningModule):
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
         
-        # self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
-        # self.relu = nn.ReLU()
+        self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        self.relu = nn.ReLU()
 #        self.W2 = torch.randn((int(self.args.hidden_size), int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
         
 #        self.args.learning_rate = 1e-4
@@ -148,7 +149,7 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        #H1 = sum_outputs.encoder_last_hidden_state
+        H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -184,10 +185,10 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        #H2 = sim_outputs.encoder_last_hidden_state
+        H2 = sim_outputs.encoder_last_hidden_state
 
-        # Rep1 = torch.matmul(H1, self.W)
-        # Rep2 = torch.matmul(H2, self.W)
+        Rep1 = torch.matmul(H1, self.W)
+        Rep2 = torch.matmul(H2, self.W)
         
         # ### MLP
         # Rep1 = self.relu(Rep1)
@@ -198,8 +199,8 @@ class SumSim(pl.LightningModule):
         # Rep1 = self.relu(Rep1)
         # Rep2 = self.relu(Rep2)
 
-        # CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
-        # sim_score = CosSim(Rep1, Rep2)
+        CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
+        sim_score = CosSim(Rep1, Rep2)
 
         if self.args.custom_loss:
             '''
@@ -212,7 +213,7 @@ class SumSim(pl.LightningModule):
             
             loss = sim_outputs.loss * self.args.w1
             loss += sum_outputs.loss * self.args.w2
-            #loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
+            loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
             # self.opt.step()
@@ -239,6 +240,11 @@ class SumSim(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             #sentence = self.preprocessor.encode_sentence(sentence)
+            ### compute the keywords from texts
+            # key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 2), stop_words=None)
+            # for i in range(min(3, len(key_words))):
+            #     sentence = key_words[i][0] + " " +sentence
+
             text = "summarize: " + sentence
             text = sentence
             # summarize the document
@@ -323,9 +329,9 @@ class SumSim(pl.LightningModule):
             {
                 "params": [p for n,p in model1.named_parameters()]
             },
-            # {
-            #     "params": self.W
-            # },
+            {
+                "params": self.W
+            },
             # {
             #     "params": self.W2
             # }
@@ -388,7 +394,7 @@ class SumSim(pl.LightningModule):
       p.add_argument('-HiddenSize','--hidden_size',type=int, default = 768/2)
       p.add_argument('-Weight1', '--w1', type = int, default = 20)
       p.add_argument('-Weight2', '--w2', type = int, default = 1)
-      p.add_argument('-Lambda', '--lambda_', type = int, default = 6)
+      p.add_argument('-Lambda', '--lambda_', type = int, default = 15)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
@@ -405,7 +411,7 @@ class SumSim(pl.LightningModule):
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
-      p.add_argument('-device','--device', default = 'cuda:0')
+      p.add_argument('-device','--device', default = 'cuda')
       #p.add_argument('-NumBeams','--num_beams', default=8)
       return p
 
@@ -465,6 +471,11 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         source = self.inputs[index]
+         ### add keywords
+        # key_words = kw_model.extract_keywords(source, keyphrase_ngram_range=(1, 2), stop_words=None)
+        # for i in range(min(len(key_words), 3)):
+        #     source = key_words[i][0] + ' ' + source
+
         source = "summarize: " + self.inputs[index]
         target = self.targets[index]
 
@@ -544,7 +555,7 @@ class ValDataset(Dataset):
 
 def train(args):
     seed_everything(args.seed)
-
+    
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         dirpath=args.output_dir,
         filename="checkpoint-{epoch}",
@@ -575,9 +586,9 @@ def train(args):
 
     print("Initialize model")
     #model = T5FineTuner(args)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    torch.cuda.set_device(0)
-    model = SumSim(args)#.to(device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #torch.cuda.set_device(0)
+    model = SumSim(args)
     #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)

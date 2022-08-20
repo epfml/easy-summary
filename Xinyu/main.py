@@ -3,17 +3,19 @@ Main Program:
 > python main.py
 '''
 # -- fix path --
+CUDA_LAUNCH_BLOCKING=1
+import torch
+#torch.multiprocessing.set_start_method('forkserver', force=True)
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
-import torch
+
 from preprocessor import D_WIKI,D_WIKI_SMALL, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
 import time
 import json
-from contextlib import contextmanager
-#from Ts_T5 import train
-import optuna
+
+#from contextlib import contextmanager
 import argparse
 #from Ts_T5 import T5FineTuner, train
 from argparse import ArgumentParser
@@ -72,45 +74,36 @@ def log_params(filepath, kwargs):
         kwargs_str[key] = str(kwargs[key])
     json.dump(kwargs_str, filepath.open('w'), indent=4)
 
-@contextmanager
-def log_stdout(filepath, mute_stdout=False):
-    '''Context manager to write both to stdout and to a file'''
+# @contextmanager
+# def log_stdout(filepath, mute_stdout=False):
+#     '''Context manager to write both to stdout and to a file'''
 
-    class MultipleStreamsWriter:
-        def __init__(self, streams):
-            self.streams = streams
+#     class MultipleStreamsWriter:
+#         def __init__(self, streams):
+#             self.streams = streams
 
-        def write(self, message):
-            for stream in self.streams:
-                stream.write(message)
+#         def write(self, message):
+#             for stream in self.streams:
+#                 stream.write(message)
 
-        def flush(self):
-            for stream in self.streams:
-                stream.flush()
+#         def flush(self):
+#             for stream in self.streams:
+#                 stream.flush()
 
-    save_stdout = sys.stdout
-    log_file = open(filepath, 'w')
-    if mute_stdout:
-        sys.stdout = MultipleStreamsWriter([log_file])  # Write to file only
-    else:
-        sys.stdout = MultipleStreamsWriter([save_stdout, log_file])  # Write to both stdout and file
-    try:
-        yield
-    finally:
-        sys.stdout = save_stdout
-        log_file.close()
+#     save_stdout = sys.stdout
+#     log_file = open(filepath, 'w')
+#     if mute_stdout:
+#         sys.stdout = MultipleStreamsWriter([log_file])  # Write to file only
+#     else:
+#         sys.stdout = MultipleStreamsWriter([save_stdout, log_file])  # Write to both stdout and file
+#     try:
+#         yield
+#     finally:
+#         sys.stdout = save_stdout
+#         log_file.close()
 
 
-# def run_training(args_dict, dataset=WIKI_DATASET):
 
-#     args_dict['output_dir'] = get_experiment_dir(create_dir=True)
-#     log_params(args_dict["output_dir"] / "params.json", args_dict)
-
-#     preprocessor = Preprocessor(args_dict['features_kwargs'])
-#     preprocessor.preprocess_dataset(dataset)
-#     args_dict["dataset"] = dataset
-#     with log_stdout(args_dict['output_dir'] / "logs.txt"):
-#         train(args_dict)
 
 def run_training(args, dataset):
 
@@ -131,17 +124,19 @@ def run_training(args, dataset):
     #     #train_summary(args)
     #     train(args)
 
-## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole)
+## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole) original loss
      ## MLO98: T5_2 on D-wiki-small  20*sim_loss+1*sum_loss (0.55743s) --- stop
 
      ## MLO95: T5_2 on D-wiki-small  50*sim_loss+1*sum_loss (0.55163) -- stop
 ## MLO96: T5_2 on wiki-doc original loss
      ## MLO95: T5_2 on D-wiki-small 50*sim_loss+1*sum_loss-10CosSim(ReLU(W ReLU(WH))) (0.55887) -- stop
-## MLO95: T5_2 on D-wiki-small  50*sim_loss+1*sum_loss-10CosSim(ReLu(WH)) --- stop
+
 ## MLO98: T5_2 D_wiki (whole) original loss
-## MLO95: T5_2 on D-wiki-small  20*sim_loss+1*sum_loss-6CosSim(ReLU)
-## MLO97: T5_2 D_wiki 20*sim_loss+1*sum_loss
-dataset = D_WIKI
+      ## MLO98: T5_2 D_wiki (whole) 20Sim+1Sum-6CosSim --- kill
+
+## MLO97: T5 single D_wiki  original loss
+## MLO95: T5_2 D_wiki_small 20Sim+1Sum-15CosSim
+dataset = D_WIKI_SMALL
 
 args = parse_arguments()
 run_training(args, dataset)

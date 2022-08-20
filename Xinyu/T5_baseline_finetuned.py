@@ -1,7 +1,7 @@
 '''
 sum_sim model
 '''
-
+import torch
 from functools import lru_cache
 from gc import callbacks
 from lib2to3.pgen2 import token
@@ -22,11 +22,10 @@ import random
 import nltk
 from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
 from summarizer import Summarizer
-
+from keybert import KeyBERT
 nltk.download('punkt')
 
-import numpy as np
-import torch
+
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
@@ -37,9 +36,11 @@ from transformers import (
     T5TokenizerFast,
     BertTokenizer, BertForPreTraining,
     BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
-    get_linear_schedule_with_warmup, AutoConfig, AutoModel
+    get_linear_schedule_with_warmup, AutoConfig, AutoModel,
+    get_cosine_schedule_with_warmup
 )
 from Ts_T5 import T5FineTuner
+#kw_model = KeyBERT()
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
 class MetricsCallback(pl.Callback):
@@ -60,7 +61,7 @@ class T5BaseLineFineTuned(pl.LightningModule):
         self.save_hyperparameters()
         
         # Load pre-trained model and tokenizer
-        self.model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt')
+        self.model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_T5_FineTuned_WikiLarge/checkpoint-epoch=2.ckpt')
         self.model =  self.model.model.to(self.args.device)
         self.tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
@@ -143,6 +144,11 @@ class T5BaseLineFineTuned(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             #sentence = self.preprocessor.encode_sentence(sentence)
+            ### compute the keywords from texts
+            # key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 2), stop_words=None)
+            # for i in range(min(3, len(key_words))):
+            #     sentence = key_words[i][0] + " " +sentence
+            ### add special token
             text = "simplify: " + sentence
             encoding = self.tokenizer(
             [text],
@@ -199,8 +205,13 @@ class T5BaseLineFineTuned(pl.LightningModule):
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n,p in model.named_parameters()]
-            }
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+                "weight_decay": self.args.weight_decay,
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+                "weight_decay": 0.0,
+            },
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         self.opt = optimizer
@@ -237,7 +248,7 @@ class T5BaseLineFineTuned(pl.LightningModule):
                    // self.args.gradient_accumulation_steps
                    * float(self.args.num_train_epochs)
                    )
-        scheduler = get_linear_schedule_with_warmup(
+        scheduler = get_cosine_schedule_with_warmup(
             self.opt, num_warmup_steps=self.args.warmup_steps, num_training_steps=t_total
         )
         self.lr_scheduler = scheduler
@@ -256,9 +267,9 @@ class T5BaseLineFineTuned(pl.LightningModule):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
+      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
@@ -270,7 +281,7 @@ class T5BaseLineFineTuned(pl.LightningModule):
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
-      p.add_argument('-device','--device', default = 'cuda')
+      p.add_argument('-device','--device', default = 'cuda:0')
       #p.add_argument('-NumBeams','--num_beams', default=8)
       return p
 
@@ -330,8 +341,14 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         source = self.inputs[index]
-        source = "simplify: " + self.inputs[index]
         target = self.targets[index]
+        ### add keywords
+        # key_words = kw_model.extract_keywords(target, keyphrase_ngram_range=(1, 2), stop_words=None)
+        # for i in range(min(len(key_words), 3)):
+        #     source = key_words[i][0] + ' ' + source
+
+        source = "simplify: " + source
+        
 
         tokenized_inputs = self.tokenizer(
             [source],
@@ -437,11 +454,12 @@ def train(args):
         #progress_bar_refresh_rate=1,
 
     )
-
-    print("Initialize model")
     #model = T5FineTuner(args)
+    #torch.multiprocessing.set_start_method('spawn')
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = T5BaseLineFineTuned(args)
+    #model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1660833159929347/checkpoint-epoch=1.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)
