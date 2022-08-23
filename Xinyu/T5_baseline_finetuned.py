@@ -1,6 +1,8 @@
 '''
 sum_sim model
 '''
+
+CUDA_LAUNCH_BLOCKING=1
 import torch
 from functools import lru_cache
 from gc import callbacks
@@ -22,7 +24,7 @@ import random
 import nltk
 from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
 from summarizer import Summarizer
-from keybert import KeyBERT
+# from keybert import KeyBERT
 nltk.download('punkt')
 
 
@@ -67,7 +69,8 @@ class T5BaseLineFineTuned(pl.LightningModule):
 
 
         # set custom loss TRUE or FALSE
-        self.args.custom_loss = True
+        self.args.device = 'cuda'
+        self.args.num_train_epochs=2
 #        self.args.learning_rate = 1e-4
 
 
@@ -144,10 +147,6 @@ class T5BaseLineFineTuned(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             #sentence = self.preprocessor.encode_sentence(sentence)
-            ### compute the keywords from texts
-            # key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 2), stop_words=None)
-            # for i in range(min(3, len(key_words))):
-            #     sentence = key_words[i][0] + " " +sentence
             ### add special token
             text = "simplify: " + sentence
             encoding = self.tokenizer(
@@ -267,21 +266,21 @@ class T5BaseLineFineTuned(pl.LightningModule):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
       p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
       p.add_argument('-NumEpoch','--num_train_epochs',default=5)
-      p.add_argument('-CosLoss','--custom_loss', default=True)
+      p.add_argument('-CosLoss','--custom_loss', default=False)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
-      p.add_argument('-device','--device', default = 'cuda:0')
+      p.add_argument('-device','--device', default = 'cuda')
       #p.add_argument('-NumBeams','--num_beams', default=8)
       return p
 
@@ -342,11 +341,6 @@ class TrainDataset(Dataset):
     def __getitem__(self, index):
         source = self.inputs[index]
         target = self.targets[index]
-        ### add keywords
-        # key_words = kw_model.extract_keywords(target, keyphrase_ngram_range=(1, 2), stop_words=None)
-        # for i in range(min(len(key_words), 3)):
-        #     source = key_words[i][0] + ' ' + source
-
         source = "simplify: " + source
         
 
@@ -458,8 +452,8 @@ def train(args):
     #torch.multiprocessing.set_start_method('spawn')
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = T5BaseLineFineTuned(args)
-    #model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1660833159929347/checkpoint-epoch=1.ckpt')
+    #model = T5BaseLineFineTuned(args)
+    model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1661066252541905/checkpoint-epoch=2.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

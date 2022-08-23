@@ -3,7 +3,7 @@ Main Program:
 > python main.py
 '''
 # -- fix path --
-CUDA_LAUNCH_BLOCKING=1
+
 import torch
 #torch.multiprocessing.set_start_method('forkserver', force=True)
 from pathlib import Path
@@ -124,18 +124,13 @@ def run_training(args, dataset):
     #     #train_summary(args)
     #     train(args)
 
-## MLO94: Bart pretrained+finetuned(simplification) on D_wiki dataset(whole) original loss
-     ## MLO98: T5_2 on D-wiki-small  20*sim_loss+1*sum_loss (0.55743s) --- stop
-
-     ## MLO95: T5_2 on D-wiki-small  50*sim_loss+1*sum_loss (0.55163) -- stop
-## MLO96: T5_2 on wiki-doc original loss
-     ## MLO95: T5_2 on D-wiki-small 50*sim_loss+1*sum_loss-10CosSim(ReLU(W ReLU(WH))) (0.55887) -- stop
 
 ## MLO98: T5_2 D_wiki (whole) original loss
-      ## MLO98: T5_2 D_wiki (whole) 20Sim+1Sum-6CosSim --- kill
-
-## MLO97: T5 single D_wiki  original loss
-## MLO95: T5_2 D_wiki_small 20Sim+1Sum-15CosSim
+## MLO96: T5_2 wiki-doc 5Sim+1Sum 
+## MLO94: T5_2 D_wiki (whole) 5Sim+1Sum
+## MLO95: T5_2 D_wiki (whole) keyword_num  original loss
+## MLO96: T5_2 D_wiki_small KL(QHW) seq_dim = 512 hidd_dim = 1 20Sim+1Sum+5KL
+## MLO98: T5_2 D_wiki_small KL(QHW) seq_dim = 512 hidd_dim = 384 20Sim+1Sum+5KL
 dataset = D_WIKI_SMALL
 
 args = parse_arguments()

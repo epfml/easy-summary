@@ -72,9 +72,9 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocSmall_T5Single_keyword_finetuned_'
+model_dirname = 'exp_DWiki_T5Single'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=4.ckpt'
+checkpoint_path = 'checkpoint-epoch=1.ckpt'
 
 # load the model
 Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
@@ -91,9 +91,9 @@ tokenizer = Model.tokenizer
 def generate_single(sentence, preprocessor = None):
     
     ### add keyword
-    key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 2), stop_words=None)
-    for i in range(min(3, len(key_words))):
-        sentence = key_words[i][0] + " " +sentence
+    # key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
+    # for i in range(min(3, len(key_words))):
+    #     sentence = key_words[i][0] + "_" + str(round(key_words[i][1],2)) + ' ' +sentence
     
     text = "simplify: " + sentence
     text = sentence
@@ -543,17 +543,19 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 ####### wiki-doc whole #######
 # T5 single (original loss): SARI: 41.74      BLEU: 8.04      FKGL: 9.92 
 # BART single (original loss): SARI: 40.84     D-SARI: 0.40    BLEU: 3.83      FKGL: 9.12 
+# T5_2 (original loss): SARI: 40.21      D-SARI: 0.38    BLEU: 2.40      FKGL: 7.98 
 
 ####### wiki-doc-small #######
 # Bart: SARI: 40.16      BLEU: 5.01      FKGL: 9.59 
 # T5: SARI: 40.04      BLEU: 2.55      FKGL: 7.73 
 # T5 single: SARI: 40.69      BLEU: 4.71      FKGL: 10.02
+# T5 single keyword_num: SARI: 40.98      D-SARI: 0.37    BLEU: 6.62      FKGL: 9.80 
 
 ### SimLoss + SumLoss ###
 # Bart: SARI: 40.46      BLEU: 2.41      FKGL: 8.38
@@ -564,8 +566,8 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 
 
 ####### D_WIKI #######
-#evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
-
+evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+# T5 single: SARI: 44.72      D-SARI: 0.36    BLEU: 25.67     FKGL: 9.07
 
 ####### trained on D_wiki_small #######
 # T5 -8CosSim+20SimLoss+3SumLoss: SARI: 44.14      BLEU: 22.12     FKGL: 9.09 

@@ -1,13 +1,26 @@
-from preprocessor import DATASETS_DIR,PROCESSED_DATA_DIR,WIKI_DOC,WIKI_PARAGH_FILTER_DATASET, WIKILARGE_DATASET,yield_sentence_pair,yield_lines, WIKI_PARA_DATASET, get_data_filepath, tokenize, write_lines
+# -- fix path --
+from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+# -- end fix path --
+from preprocessor import DATASETS_DIR,PROCESSED_DATA_DIR,WIKI_DOC,WIKI_DOC_FILTER,WIKI_DOC_CLEAN,WIKI_PARAGH_FILTER_DATASET, WIKILARGE_DATASET,yield_sentence_pair,yield_lines, WIKI_PARA_DATASET, get_data_filepath, tokenize, write_lines
 import numpy as np
-import tqdm
-from summarizer import Summarizer
 from preprocessor import WIKILARGE_DATASET
 from rouge import Rouge
+import matplotlib.pyplot as plt
 
-model = Summarizer(model='distilbert-base-uncased')
+
+from keybert import KeyBERT
+from transformers.pipelines import pipeline
+
+hf_model = pipeline("feature-extraction", model="distilbert-base-cased")
+
+kw_model = KeyBERT(model = 'all-mpnet-base-v2')
+
+dataset = WIKI_DOC_FILTER
+
 TYPES = ['complex', 'simple']
-PHASES = ['train','valid','test']
+PHASES = ['train', 'valid', 'test']
 HASH = '26ebb6aa762eac859c7b417fbb503eb7'
 
 rouge = Rouge()
@@ -26,41 +39,92 @@ cnt = 0
 #                     print(rouge_score[0]['rouge-1']['f'])
 #                     break
                 
+for ps in PHASES:
+    simple_file_path = get_data_filepath(dataset,ps, 'simple')
+    complex_file_path = get_data_filepath(dataset,ps, 'complex')
+    cnt=0
+    tot=0
+    complex_lens = []
+    simple_lens = []
 
-all_list = []
+    for complex_sentence, simple_sentence in yield_sentence_pair(complex_file_path, simple_file_path):
+        sim_kw = kw_model.extract_keywords(simple_sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
+        com_kw = kw_model.extract_keywords(complex_sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
 
-for phase in tqdm.tqdm(PHASES):
-    if phase == 'test':
-        continue
-    complex_file = get_data_filepath(WIKI_DOC, phase, 'complex')
-    simple_file = get_data_filepath(WIKI_DOC, phase, 'simple')
-    tmp = []
-    for complex_sent, simple_sent in (yield_sentence_pair(complex_file, simple_file)):
-        tmp.append(len(tokenize(complex_sent))/len(tokenize(simple_sent)))
-    all_list.append(np.array(tmp).mean())
-print(all_list)
-# [31.73652572747933, 31.64796329047812]
+        simlist = []
 
-for phase in tqdm.tqdm(PHASES):
-    '''
-    Apply BERT to the complex sentences and get the summary.
-    Ratio: 0.07
-    '''
-    if phase == 'test':
-        continue
-    complex_file_path = get_data_filepath(WIKI_DOC, phase, 'complex')
-    save_complex_summary_path = get_data_filepath(WIKI_DOC, phase, 'complex_summary')
-    summary = []
-    for complex_sent in yield_lines(complex_file_path):
-        complex_summary = model(complex_sent, ratio=0.07)
-        summary.append(complex_summary)
+        tot+=1
+        if tot%10==0:
+            print(cnt)
+
+        for i in range(min(5, len(sim_kw))):
+            simlist.append(sim_kw[i][0])
+        simlist = set(simlist)
+
+        for i in range(min(5, len(com_kw))):
+            if com_kw[i][0] in simlist:
+                #cnt+=1
+                complex_lens.append(complex_sentence)
+                simple_lens.append(simple_sentence)
+                break
     
-    file_write_obj = open(save_complex_summary_path, 'w', encoding='utf-8')
-    for var in tqdm.tqdm(summary):
-        file_write_obj.write(var)
-        file_write_obj.write('\n')
-    file_write_obj.close()
 
-print("Done!")
+
+    #print(f'{ps}: {cnt}/{tot}')
+# train: 23889/34727
+# valid: 5892/8540
+# test: 118/166
+
+
+# for phase in PHASES:
+#     complex_lens = []
+#     simple_lens = []
+#     complex_file = get_data_filepath(WIKI_DOC, phase, 'complex')
+#     simple_file = get_data_filepath(WIKI_DOC, phase, 'simple')
+
+#     save_complex_path = get_data_filepath(WIKI_DOC_FILTER, phase, 'complex')
+#     save_simple_path = get_data_filepath(WIKI_DOC_FILTER, phase, 'simple')
+#     #tmp = []
+#     for complex_sent, simple_sent in (yield_sentence_pair(complex_file, simple_file)):
+#         #tmp.append(len(tokenize(complex_sent))/len(tokenize(simple_sent)))
+#         a = len(tokenize(complex_sent))
+#         b = len(tokenize(simple_sent))
+#         if b>256 or a>3000:
+#             continue
+#         #print(f'Complex lens: {a}, simple lens: {b}')
+#         complex_lens.append(complex_sent)
+#         simple_lens.append(simple_sent)
+    
+#     file_write_obj = open(save_complex_path, 'w', encoding='utf-8')
+#     for var in complex_lens:
+#         file_write_obj.write(var)
+#         file_write_obj.write('\n')
+#     file_write_obj.close()
+
+#     file_write_obj = open(save_simple_path, 'w', encoding='utf-8')
+#     for var in simple_lens:
+#         file_write_obj.write(var)
+#         file_write_obj.write('\n')
+#     file_write_obj.close()
+
+#     print("done")
+
+
+
+
+# complex_lens = np.array(complex_lens)
+# simple_lens = np.array(simple_lens)
+
+# print(f'complex mean: {np.mean(complex_lens)}, simple mean: {np.mean(simple_lens)}')
+# print(f'complex std: {np.std(complex_lens)}, simple std: {np.std(simple_lens)}')
+# print(f'Len: {len(simple_lens)}')
+
+# plt.hist(complex_lens, bins = 30)
+# plt.hist(simple_lens, bins = 30)
+# plt.title('distribution')
+# plt.savefig('dis.png')
+
+
+
 
 

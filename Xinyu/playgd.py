@@ -9,9 +9,9 @@ kl_loss = nn.KLDivLoss(reduction = 'batchmean', log_target = True)
 
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 device = 'cpu'
-tokenizer = AutoTokenizer.from_pretrained("ml6team/keyphrase-generation-t5-small-inspec")
+# tokenizer = AutoTokenizer.from_pretrained("ml6team/keyphrase-generation-t5-small-inspec")
 
-model = AutoModelForSeq2SeqLM.from_pretrained("ml6team/keyphrase-generation-t5-small-inspec").to(device)
+# model = AutoModelForSeq2SeqLM.from_pretrained("ml6team/keyphrase-generation-t5-small-inspec").to(device)
 
 # import py7zr
 # f1 = py7zr.SevenZipFile('Xinyu/resources/datasets/D_wiki/train.src.7z')
@@ -25,26 +25,27 @@ model = AutoModelForSeq2SeqLM.from_pretrained("ml6team/keyphrase-generation-t5-s
 # model = BartForConditionalGeneration.from_pretrained('facebook/bart-base').to(device)
 # tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-base')
 
-# model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
-# tokenizer = T5Tokenizer.from_pretrained('t5-base')
+model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
+tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
-sent = """
-Keyphrase extraction is a technique in text analysis where you extract the
-important keyphrases from a document. Thanks to these keyphrases humans can
-understand the content of a text very quickly and easily without reading it
-completely. Keyphrase extraction was first done primarily by human annotators,
-who read the text in detail and then wrote down the most important keyphrases.
-The disadvantage is that if you work with a lot of documents, this process
-can take a lot of time. 
+# sent = """
+# Keyphrase extraction is a technique in text analysis where you extract the
+# important keyphrases from a document. Thanks to these keyphrases humans can
+# understand the content of a text very quickly and easily without reading it
+# completely. Keyphrase extraction was first done primarily by human annotators,
+# who read the text in detail and then wrote down the most important keyphrases.
+# The disadvantage is that if you work with a lot of documents, this process
+# can take a lot of time. 
 
-Here is where Artificial Intelligence comes in. Currently, classical machine
-learning methods, that use statistical and linguistic features, are widely used
-for the extraction process. Now with deep learning, it is possible to capture
-the semantic meaning of a text even better than these classical methods.
-Classical methods look at the frequency, occurrence and order of words
-in the text, whereas these neural approaches can capture long-term
-semantic dependencies and context of words in a text.
-""".replace("\n", " ")
+# Here is where Artificial Intelligence comes in. Currently, classical machine
+# learning methods, that use statistical and linguistic features, are widely used
+# for the extraction process. Now with deep learning, it is possible to capture
+# the semantic meaning of a text even better than these classical methods.
+# Classical methods look at the frequency, occurrence and order of words
+# in the text, whereas these neural approaches can capture long-term
+# semantic dependencies and context of words in a text.
+# """.replace("\n", " ")
+sent = ['The story is so great and a lot of people love it.']
 tg = ['The story is good and people like it.']
 
 # sim_tgt = 'jason thomas kenney pc mla ( born may 30 , 1968 ) is a canadian politician . he is the 18th premier of alberta since 30 april 2019 , and leader of the united conservative party in alberta since 2017.kenney was inspired to enter politics after having a short conversation with former prime minister john diefenbaker at an early age . '
@@ -54,45 +55,45 @@ tg = ['The story is good and people like it.']
 # res = model.extract_keywords(sim_tgt, keyphrase_ngram_range=(1, 2), stop_words=None)
 # print(res[0][0]+' '+ sim_tgt)
 
-inputs = tokenizer(
-    sent,
-    max_length = 256,
-    truncation = True,
-    padding = 'max_length',
-    return_tensors = 'pt'
-).to(device)
+# inputs = tokenizer(
+#     sent,
+#     max_length = 256,
+#     truncation = True,
+#     padding = 'max_length',
+#     return_tensors = 'pt'
+# ).to(device)
 
-src_ids = inputs['input_ids'].to(device)
-src_mask = inputs['attention_mask'].to(device)
+# src_ids = inputs['input_ids'].to(device)
+# src_mask = inputs['attention_mask'].to(device)
 
-o = model.generate(src_ids)
+# o = model.generate(src_ids)
 
-tgt = tokenizer.decode(o[0], skip_special_tokens=True)
+# tgt = tokenizer.decode(o[0], skip_special_tokens=True)
 
-decoding = tokenizer(
-    tgt,
-    max_length = 256,
-    truncation = True,
-    padding = 'max_length',
-    return_tensors = 'pt'
-)
+# decoding = tokenizer(
+#     tgt,
+#     max_length = 256,
+#     truncation = True,
+#     padding = 'max_length',
+#     return_tensors = 'pt'
+# )
 
-labels = decoding['input_ids'].to(device)
-labels[labels[:,:] == tokenizer.pad_token_id] = -100
-decoder_attention_mask = decoding['attention_mask'].to(device)
+# labels = decoding['input_ids'].to(device)
+# labels[labels[:,:] == tokenizer.pad_token_id] = -100
+# decoder_attention_mask = decoding['attention_mask'].to(device)
 
-print(tokenizer.decode(o[0], skip_special_tokens=True))
+# print(tokenizer.decode(o[0], skip_special_tokens=True))
 
-outputs = model(
-    input_ids = src_ids,
-    attention_mask = src_mask,
-    labels = labels,
-    decoder_attention_mask = decoder_attention_mask,
-    #output_hidden_states = True
-)
-print(outputs.loss)
+# outputs = model(
+#     input_ids = src_ids,
+#     attention_mask = src_mask,
+#     labels = labels,
+#     decoder_attention_mask = decoder_attention_mask,
+#     #output_hidden_states = True
+# )
+# print(outputs.loss)
 
-'''
+
 inputs = tokenizer(
     sent,
     max_length = 256,
@@ -154,7 +155,7 @@ for i, summary_id in enumerate(summary_ids):
     print(summary_id.shape)
     padded_summary_ids[i, :summary_id.shape[0]] = summary_id
 
-print(padded_summary_ids.shape)
+print("padding summary_ids: ",padded_summary_ids.shape)
 attention_mask = torch.ones(padded_summary_ids.shape).to(device)
 print(tokenizer.pad_token_id)
 attention_mask[padded_summary_ids[:,:]==tokenizer.pad_token_id]=0
@@ -171,8 +172,6 @@ tmpids = model.generate(
                 num_return_sequences=1
 ).to(device)
 print(tmpids.shape)
-# BART model
-ans = tokenizer.batch_decode(tmpids, skip_special_tokens = True, clean_up_tokenization_spaces = True)[0]
 # T5 model
 #ans = tokenizer.decode(tmpids[0], skip_special_tokens = True, clean_up_tokenization_spaces = True)
 #print(ans)
@@ -190,21 +189,31 @@ print(outputs.encoder_last_hidden_state.shape)
 #print(outputs.decoder_hidden_states[1].shape)
 
 
-W = torch.randn((768, int(768/2)), requires_grad=True).to(device)
+W = torch.randn((768, 1), requires_grad=True).to(device)
+Q = torch.randn((256, 512), requires_grad = True).to(device)
 
-r1 = torch.matmul(H1, W)
+r1 = torch.transpose((torch.transpose(H1, 1,2) @ Q), 1,2)
+r2 = torch.transpose((torch.transpose(H2, 1,2) @ Q), 1,2)
+
+print(r1.shape, r2.shape)
+
+r1 = torch.matmul(r1, W)
 print(r1.shape)
-r2 = torch.matmul(H2, W)
+r2 = torch.matmul(r2, W)
 print(r2.shape)
 
-opt = nn.LogSoftmax(dim=2)
+r1 = r1.squeeze(dim=2)
+opt = nn.LogSoftmax(dim=1) 
+print(opt(r1).shape)
 
-r1 = opt(r1)
-r2 = opt(r2)
 
-print(kl_loss(r1,r2))
+
+# r1 = opt(r1)
+# r2 = opt(r2)
+
+# print(kl_loss(r1,r2))
 # sim = nn.CosineSimilarity(dim=2, eps=1e-6)
 # score = sim(r1,r2)
 
 # print(score.mean(dim = 1))
-'''
+

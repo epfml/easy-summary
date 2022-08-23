@@ -40,7 +40,7 @@ from transformers import (
     get_cosine_schedule_with_warmup,
 )
 from Ts_T5 import T5FineTuner
-from keybert import KeyBERT
+# from keybert import KeyBERT
 #kw_model = KeyBERT()
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
@@ -52,31 +52,7 @@ class MetricsCallback(pl.Callback):
   def on_validation_end(self, trainer, pl_module):
       self.metrics.append(trainer.callback_metrics)
 
-### Special tokens
-def char_ratio(complex_sentence, simple_sentence):
-    return round(safe_division(len(simple_sentence), len(complex_sentence)))
 
-
-def LevSim(complex_sentence, simple_sentence):
-    return round(Levenshtein.ratio(complex_sentence, simple_sentence))
-
-def word_rank_ratio(complex_sentence, simple_sentence):
-    def get_rank(word):
-        rank = get_word2rank().get(word, len(get_word2rank()))
-        return np.log(1+rank)
-    
-    def get_lexical_complexity_score(sentence):
-        words = tokenize(remove_stopwords(remove_punctuation(sentence)))
-        words = [word for word in words if word in get_word2rank()]
-        if len(words)==0:
-            return np.log(1+len(get_word2rank()))
-        return np.quantile([get_rank(word) for word in words], 0.75)
-    
-    return round(min(safe_division(
-        get_lexical_complexity_score(simple_sentence),
-        get_lexical_complexity_score(complex_sentence)
-    ), 2))
-### Speicial tokens end
 
 class SumSim(pl.LightningModule):
     def __init__(self,args):
@@ -94,8 +70,11 @@ class SumSim(pl.LightningModule):
 
         
         self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        #self.W2 = torch.randn((int(self.args.hidden_size), 1), requires_grad=True, device = self.args.device)
+        self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
         self.relu = nn.ReLU()
-#        self.W2 = torch.randn((int(self.args.hidden_size), int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
+        
         
 #        self.args.learning_rate = 1e-4
 
@@ -149,6 +128,7 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
+        
         H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
@@ -185,10 +165,29 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
+
         H2 = sim_outputs.encoder_last_hidden_state
+
+        ### KL Divergence ###
+        H1 = torch.transpose((torch.transpose(H1, 1,2)@self.Q), 1,2)
+        H2 = torch.transpose((torch.transpose(H2, 1,2)@self.Q), 1,2)
+
 
         Rep1 = torch.matmul(H1, self.W)
         Rep2 = torch.matmul(H2, self.W)
+
+        # ReLU(H*W)*W2
+        # Rep1 = self.relu(Rep1)
+        # Rep2 = self.relu(Rep2)
+        # Rep1 = torch.matmul(Rep1,self.W2)
+        # Rep2 = torch.matmul(Rep2,self.W2)
+
+        # Rep1 = Rep1.squeeze(dim=2)
+        # Rep2 = Rep2.squeeze(dim=2)
+        LogSoftMax = nn.LogSoftmax(dim=1)
+        Rep1 = LogSoftMax(Rep1)
+        Rep2 = LogSoftMax(Rep2)
+        ###################
         
         # ### MLP
         # Rep1 = self.relu(Rep1)
@@ -199,8 +198,8 @@ class SumSim(pl.LightningModule):
         # Rep1 = self.relu(Rep1)
         # Rep2 = self.relu(Rep2)
 
-        CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
-        sim_score = CosSim(Rep1, Rep2)
+        # CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
+        # sim_score = CosSim(Rep1, Rep2)
 
         if self.args.custom_loss:
             '''
@@ -213,7 +212,11 @@ class SumSim(pl.LightningModule):
             
             loss = sim_outputs.loss * self.args.w1
             loss += sum_outputs.loss * self.args.w2
-            loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
+            ### KL ###
+            loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
+            
+            ### CosSim ###
+            #loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
             # self.manual_backward(loss)
             # self.opt.step()
@@ -240,10 +243,6 @@ class SumSim(pl.LightningModule):
     def sari_validation_step(self, batch):
         def generate(sentence):
             #sentence = self.preprocessor.encode_sentence(sentence)
-            ### compute the keywords from texts
-            # key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 2), stop_words=None)
-            # for i in range(min(3, len(key_words))):
-            #     sentence = key_words[i][0] + " " +sentence
 
             text = "summarize: " + sentence
             text = sentence
@@ -332,6 +331,9 @@ class SumSim(pl.LightningModule):
             {
                 "params": self.W
             },
+            {
+                "params": self.Q
+            },
             # {
             #     "params": self.W2
             # }
@@ -392,13 +394,14 @@ class SumSim(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-HiddenSize','--hidden_size',type=int, default = 768/2)
+      p.add_argument('-SeqDim','--seq_dim', type=int, default = 512)
       p.add_argument('-Weight1', '--w1', type = int, default = 20)
       p.add_argument('-Weight2', '--w2', type = int, default = 1)
-      p.add_argument('-Lambda', '--lambda_', type = int, default = 15)
+      p.add_argument('-Lambda', '--lambda_', type = int, default = 5)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
       p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
@@ -589,7 +592,7 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #torch.cuda.set_device(0)
     model = SumSim(args)
-    #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
+    #model = SumSim.load_from_checkpoint("Xinyu/experiments/exp_1660989524854213/checkpoint-epoch=1.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

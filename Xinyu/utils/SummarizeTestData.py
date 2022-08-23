@@ -3,27 +3,40 @@ from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 # -- end fix path --
-from preprocessor import yield_lines, get_data_filepath, yield_sentence_pair,tokenize,TURKCORPUS_DATASET, WIKI_DOC
+from preprocessor import yield_lines, get_data_filepath, yield_sentence_pair,tokenize,TURKCORPUS_DATASET, WIKI_DOC, WIKI_DOC_Small,D_WIKI, D_WIKI_SMALL
 from summarizer import Summarizer
 import numpy as np
+from keybert import KeyBERT
+from transformers.pipelines import pipeline
+
+hf_model = pipeline("feature-extraction", model="distilbert-base-cased")
+
+kw_model = KeyBERT(model = 'all-mpnet-base-v2')
 
 
-model = Summarizer(model='distilbert-base-uncased')
-dataset = WIKI_DOC
+# model = Summarizer(model='distilbert-base-uncased')
+dataset = D_WIKI_SMALL
 
-complex_file_path = get_data_filepath(dataset,'test', 'complex')
+phases = ['train', 'valid']
 
-### different ratios for BERT_Summarizer
-p = [0.1,0.3,0.5,0.7,0.9]
 
-for ratio in p:
-    print("ratio:", ratio)
-    save_complex_summary_path = get_data_filepath(dataset,'test', 'complex_summary_'+str(ratio))
+for ps in phases:
+    simple_file_path = get_data_filepath(dataset,ps, 'simple')
+    complex_file_path = get_data_filepath(dataset,ps, 'complex')
+    save_complex_summary_path = get_data_filepath(dataset,ps, 'complex_keyword')
     summary = []
-    for complex_sent in yield_lines(complex_file_path):
-        complex_summary = model(complex_sent, ratio=ratio)
-        summary.append(complex_summary)
-
+    cnt=1
+    for complex_sentence, simple_sentence in yield_sentence_pair(complex_file_path, simple_file_path):
+        key_words = kw_model.extract_keywords(simple_sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
+        
+        for i in range(min(3, len(key_words))):
+            #print(key_words[i])
+            complex_sentence = key_words[i][0] + "_" + str(round(key_words[i][1],2)) + ' ' + complex_sentence
+        summary.append(complex_sentence)
+        cnt+=1
+        print(cnt)
+        
+    
     file_write_obj = open(save_complex_summary_path, 'w', encoding='utf-8')
     for var in summary:
         file_write_obj.write(var)
@@ -31,20 +44,3 @@ for ratio in p:
     file_write_obj.close()
     print("done")
 
-#### 
-all_list = []
-for ratio in p:
-    complex_file = get_data_filepath(dataset,'test','complex')
-    summary_file = get_data_filepath(dataset,'test','complex_summary_'+str(ratio))
-    tmp =[]
-    cnt = 0
-    for complex_sent, summary_sent in yield_sentence_pair(complex_file, summary_file):
-        if len(tokenize(summary_sent))==0:
-            continue
-        tmp.append(len(tokenize(complex_sent))/len(tokenize(summary_sent)))
-        cnt += 1
-        if cnt % 100 == 0:
-            print(cnt)
-    all_list.append(np.array(tmp).mean())
-
-# [6.215887984952227, 2.9000465574257315, 1.9466336457558744, 1.4818730730731375, 1.1727811268198567]
