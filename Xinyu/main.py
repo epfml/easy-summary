@@ -11,7 +11,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 
-from preprocessor import D_WIKI,D_WIKI_SMALL, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, EPFL_NEWS_EN
+from preprocessor import D_WIKI,D_WIKI_SMALL, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN
 import time
 import json
 
@@ -125,13 +125,13 @@ def run_training(args, dataset):
     #     train(args)
 
 
-## MLO98: T5_2 D_wiki (whole) original loss
-## MLO96: T5_2 wiki-doc 5Sim+1Sum 
-## MLO94: T5_2 D_wiki (whole) 5Sim+1Sum
-## MLO95: T5_2 D_wiki (whole) keyword_num  original loss
-## MLO96: T5_2 D_wiki_small KL(QHW) seq_dim = 512 hidd_dim = 1 20Sim+1Sum+5KL
-## MLO98: T5_2 D_wiki_small KL(QHW) seq_dim = 512 hidd_dim = 384 20Sim+1Sum+5KL
-dataset = D_WIKI_SMALL
+## MLO94 (tmux 0): T5_2 D_wiki (whole) 5Sim+1Sum
+## MLO95 (tmux 0): T5_2 D_wiki (whole) keyword_num  original loss
+## MLO98 (tmux 8): T5_2 wiki-doc-clean original loss
+## MLO98 (tmux 1): T5_2 D_wiki_small KL(QHW) seq_dim = 512 hidd_dim = 1 20Sim+1Sum+15KL
+## MLO95 (tmux 1): BART Single on D_wiki 
+## MLO96 (tmux 1): T5_2 D_wiki (whole) 20Sim+1Sum
+dataset = D_WIKI
 
 args = parse_arguments()
 run_training(args, dataset)

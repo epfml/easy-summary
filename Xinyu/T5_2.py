@@ -69,11 +69,11 @@ class SumSim(pl.LightningModule):
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
         
-        self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        # self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        # self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
         #self.W2 = torch.randn((int(self.args.hidden_size), 1), requires_grad=True, device = self.args.device)
-        self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
-        self.relu = nn.ReLU()
-        self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
+        # self.relu = nn.ReLU()
+        # self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
         
         
 #        self.args.learning_rate = 1e-4
@@ -129,7 +129,7 @@ class SumSim(pl.LightningModule):
             decoder_attention_mask = batch['target_mask']
         )
         
-        H1 = sum_outputs.encoder_last_hidden_state
+        #H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -166,15 +166,15 @@ class SumSim(pl.LightningModule):
             decoder_attention_mask = batch['target_mask']
         )
 
-        H2 = sim_outputs.encoder_last_hidden_state
+       #H2 = sim_outputs.encoder_last_hidden_state
 
-        ### KL Divergence ###
-        H1 = torch.transpose((torch.transpose(H1, 1,2)@self.Q), 1,2)
-        H2 = torch.transpose((torch.transpose(H2, 1,2)@self.Q), 1,2)
+        # ### KL Divergence ###
+        # H1 = torch.transpose((torch.transpose(H1, 1,2)@self.Q), 1,2)
+        # H2 = torch.transpose((torch.transpose(H2, 1,2)@self.Q), 1,2)
 
 
-        Rep1 = torch.matmul(H1, self.W)
-        Rep2 = torch.matmul(H2, self.W)
+        # Rep1 = torch.matmul(H1, self.W)
+        # Rep2 = torch.matmul(H2, self.W)
 
         # ReLU(H*W)*W2
         # Rep1 = self.relu(Rep1)
@@ -184,9 +184,9 @@ class SumSim(pl.LightningModule):
 
         # Rep1 = Rep1.squeeze(dim=2)
         # Rep2 = Rep2.squeeze(dim=2)
-        LogSoftMax = nn.LogSoftmax(dim=1)
-        Rep1 = LogSoftMax(Rep1)
-        Rep2 = LogSoftMax(Rep2)
+        # LogSoftMax = nn.LogSoftmax(dim=1)
+        # Rep1 = LogSoftMax(Rep1)
+        # Rep2 = LogSoftMax(Rep2)
         ###################
         
         # ### MLP
@@ -213,7 +213,7 @@ class SumSim(pl.LightningModule):
             loss = sim_outputs.loss * self.args.w1
             loss += sum_outputs.loss * self.args.w2
             ### KL ###
-            loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
+            #loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
             
             ### CosSim ###
             #loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
@@ -328,12 +328,12 @@ class SumSim(pl.LightningModule):
             {
                 "params": [p for n,p in model1.named_parameters()]
             },
-            {
-                "params": self.W
-            },
-            {
-                "params": self.Q
-            },
+            # {
+            #     "params": self.W
+            # },
+            # {
+            #     "params": self.Q
+            # },
             # {
             #     "params": self.W2
             # }
@@ -393,15 +393,15 @@ class SumSim(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 768/2)
+      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 1)
       p.add_argument('-SeqDim','--seq_dim', type=int, default = 512)
       p.add_argument('-Weight1', '--w1', type = int, default = 20)
       p.add_argument('-Weight2', '--w2', type = int, default = 1)
-      p.add_argument('-Lambda', '--lambda_', type = int, default = 5)
+      p.add_argument('-Lambda', '--lambda_', type = int, default = 15)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
       p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)

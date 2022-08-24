@@ -254,11 +254,10 @@ class BartBaseLineFineTuned(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      p.add_argument('-Simplifier','--sim_model', default='t5-base')
       # facebook/bart-base
       p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
       p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
@@ -440,10 +439,9 @@ def train(args):
     )
 
     print("Initialize model")
-    #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #model = BartBaseLineFineTuned(args)
-    model = BartBaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1660459472819581/checkpoint-epoch=1.ckpt')
+    model = BartBaseLineFineTuned(args)
+    #model = BartBaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1660459472819581/checkpoint-epoch=1.ckpt')
     
     model.args.dataset = args.dataset
     print(model.args.dataset)

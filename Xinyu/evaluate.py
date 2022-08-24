@@ -72,9 +72,9 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_DWiki_T5Single'
+model_dirname = 'exp_WikiDocSmall_T5Single_keywordNum'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=1.ckpt'
+checkpoint_path = 'checkpoint-epoch=2.ckpt'
 
 # load the model
 Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
@@ -543,7 +543,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
 
 ### Original loss function ###
 ####### wiki-doc whole #######
@@ -566,8 +566,9 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 
 
 ####### D_WIKI #######
-evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 # T5 single: SARI: 44.72      D-SARI: 0.36    BLEU: 25.67     FKGL: 9.07
+# T5_2: SARI: 48.55      D-SARI: 0.38    BLEU: 17.77     FKGL: 7.06
 
 ####### trained on D_wiki_small #######
 # T5 -8CosSim+20SimLoss+3SumLoss: SARI: 44.14      BLEU: 22.12     FKGL: 9.09 

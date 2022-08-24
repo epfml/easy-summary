@@ -40,6 +40,8 @@ cnt = 0
 #                     break
                 
 for ps in PHASES:
+    save_complex_path = get_data_filepath(WIKI_DOC_CLEAN, ps, 'complex')
+    save_simple_path = get_data_filepath(WIKI_DOC_CLEAN, ps, 'simple')
     simple_file_path = get_data_filepath(dataset,ps, 'simple')
     complex_file_path = get_data_filepath(dataset,ps, 'complex')
     cnt=0
@@ -55,7 +57,7 @@ for ps in PHASES:
 
         tot+=1
         if tot%10==0:
-            print(cnt)
+            print(tot)
 
         for i in range(min(5, len(sim_kw))):
             simlist.append(sim_kw[i][0])
@@ -68,6 +70,19 @@ for ps in PHASES:
                 simple_lens.append(simple_sentence)
                 break
     
+    file_write_obj = open(save_complex_path, 'w', encoding='utf-8')
+    for var in complex_lens:
+        file_write_obj.write(var)
+        file_write_obj.write('\n')
+    file_write_obj.close()
+
+    file_write_obj = open(save_simple_path, 'w', encoding='utf-8')
+    for var in simple_lens:
+        file_write_obj.write(var)
+        file_write_obj.write('\n')
+    file_write_obj.close()
+
+    print("done")
 
 
     #print(f'{ps}: {cnt}/{tot}')
