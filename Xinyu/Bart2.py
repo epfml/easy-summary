@@ -96,13 +96,12 @@ class SumSim(pl.LightningModule):
         self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
         self.simplifier = self.simplifier.to(self.args.device)
 
-        self.W = torch.randn((768, int(768)), requires_grad=True, device = self.args.device)
-        #self.simplifier = T5FineTuner(args)
-        #T5ForConditionalGeneration.from_pretrained(self.args.model_name).to(self.args.device)
-                #self.preprocessor = load_preprocessor()
-        # set custom loss TRUE or FALSE
-        self.args.custom_loss = True
-#        self.args.learning_rate = 1e-4
+        self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        #self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
+        #self.W2 = torch.randn((int(self.args.hidden_size), 1), requires_grad=True, device = self.args.device)
+        self.relu = nn.ReLU()
+        #self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
+        
 
 
     def is_logger(self):
@@ -197,9 +196,11 @@ class SumSim(pl.LightningModule):
         )
         H2 = sim_outputs.encoder_last_hidden_state
         
+        ## CosSim
         Rep1 = torch.matmul(H1, self.W)
         Rep2 = torch.matmul(H2, self.W)
-        
+        Rep1 = self.relu(Rep1)
+        Rep2 = self.relu(Rep2)
         CosSim = nn.CosineSimilarity(dim=2, eps=1e-6)
         sim_score = CosSim(Rep1, Rep2)
 
@@ -211,15 +212,13 @@ class SumSim(pl.LightningModule):
             - ratio: control the ratio of sentences we want to compute complexity for training.
             - lambda: control the weight of the complexity loss.
             '''
-            w1 = 20
-            w2 = 0
+            loss = sim_outputs.loss * self.args.w1
+            loss += sum_outputs.loss * self.args.w2
+            ### KL ###
+            #loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
             
-
-            loss = sim_outputs.loss * w1
-            loss += sum_outputs.loss * w2
-            lambda_ = 10
-            loss += -lambda_ * (sim_score.mean(dim = 1).mean(dim = 0))
-
+            ### CosSim ###
+            loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
 
 
@@ -254,7 +253,7 @@ class SumSim(pl.LightningModule):
             # summarize the document
             inputs = self.summarizer_tokenizer(
             [text],
-            max_length = 512,
+            max_length = 256,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -264,7 +263,8 @@ class SumSim(pl.LightningModule):
                 inputs['input_ids'].to(self.args.device),
                 num_beams = 10,
                 min_length = 30,
-                max_length = 256
+                max_length = 256,
+                top_k = 120, top_p = 0.95,
             ).to(self.args.device)
 
             summary_attention_mask = torch.ones(summary_ids.shape).to(self.args.device)
@@ -279,7 +279,7 @@ class SumSim(pl.LightningModule):
                 attention_mask=summary_attention_mask,
                 do_sample=True,
                 max_length=self.args.max_seq_length,
-                num_beams=10,
+                num_beams=16,
                 top_k=130,
                 top_p=0.95,
                 early_stopping=True,
@@ -326,7 +326,13 @@ class SumSim(pl.LightningModule):
             },
             {
                 "params": self.W
-            }
+            },
+            # {
+            #     "params": self.Q
+            # },
+            # {
+            #     "params": self.W2
+            # }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         self.opt = optimizer
@@ -381,6 +387,11 @@ class SumSim(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       # facebook/bart-base
+      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 384)
+      p.add_argument('-SeqDim','--seq_dim', type=int, default = 1024)
+      p.add_argument('-Weight1', '--w1', type = int, default = 20)
+      p.add_argument('-Weight2', '--w2', type = int, default = 5)
+      p.add_argument('-Lambda', '--lambda_', type = int, default = 10)
       p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
       p.add_argument('-Simplifier','--sim_model', default='facebook/bart-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
@@ -543,7 +554,7 @@ def train(args):
         monitor="val_loss",
         verbose=True,
         mode="min",
-        save_top_k=1
+        save_top_k=3
     )
     bar_callback = pl.callbacks.TQDMProgressBar(refresh_rate=1)
     metrics_callback = MetricsCallback()
@@ -566,7 +577,6 @@ def train(args):
     )
 
     print("Initialize model")
-    #model = T5FineTuner(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SumSim(args).to(device)
     #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")

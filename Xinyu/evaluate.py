@@ -16,19 +16,23 @@ import json
 from preprocessor import Preprocessor
 import torch
 from transformers import T5ForConditionalGeneration, T5TokenizerFast
-from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DIR, WIKI_DOC, D_WIKI
+from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DIR, WIKI_DOC, D_WIKI,WIKI_DOC_CLEAN
 from preprocessor import write_lines, yield_lines, count_line, read_lines, generate_hash
 from easse.sari import corpus_sari
 import time
 from utils.D_SARI import D_SARIsent
 from googletrans import Translator
-#from Bart2 import SumSim
+from Bart2 import SumSim
 #from T5_2 import SumSim
-from T5_baseline_finetuned import T5BaseLineFineTuned
+#from T5_baseline_finetuned import T5BaseLineFineTuned
 #from Bart_baseline_finetuned import BartBaseLineFineTuned
 
 from keybert import KeyBERT
-kw_model = KeyBERT()
+from transformers.pipelines import pipeline
+
+hf_model = pipeline("feature-extraction", model="distilbert-base-cased")
+
+kw_model = KeyBERT(model = 'all-mpnet-base-v2')
 
 @contextmanager
 def log_stdout(filepath, mute_stdout=False):
@@ -72,20 +76,21 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocSmall_T5Single_keywordNum'
+#model_dirname = 'exp_DWiki_T5'
+model_dirname = 'exp_DWiki_BART'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
 checkpoint_path = 'checkpoint-epoch=2.ckpt'
 
 # load the model
-Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-model = Model.model.to(device)
-tokenizer = Model.tokenizer
+# Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+# model = Model.model.to(device)
+# tokenizer = Model.tokenizer
 
-# Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
-# summarizer = Model.summarizer.to(device)
-# simplifier = Model.simplifier.to(device)
-# summarizer_tokenizer = Model.summarizer_tokenizer
-# simplifier_tokenizer = Model.simplifier_tokenizer
+Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+summarizer = Model.summarizer.to(device)
+simplifier = Model.simplifier.to(device)
+summarizer_tokenizer = Model.summarizer_tokenizer
+simplifier_tokenizer = Model.simplifier_tokenizer
 # translator = Translator()
 
 def generate_single(sentence, preprocessor = None):
@@ -124,10 +129,12 @@ def generate(sentence, preprocessor=None):
     '''
     Apply model to generate prediction
     '''
-
+    # key_words = kw_model.extract_keywords(sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
+    # for i in range(min(3, len(key_words))):
+    #     sentence = key_words[i][0] + "_" + str(round(key_words[i][1],2)) + ' ' +sentence
     
     # For T5
-    sentence = 'summarize ' + sentence
+    #sentence = 'summarize ' + sentence
 
     encoding = summarizer_tokenizer(
         [sentence],
@@ -157,7 +164,9 @@ def generate(sentence, preprocessor=None):
         attention_mask = summary_atten_mask,
         do_sample = True,
         max_length = 256,
-        num_beams = 10, top_k = 130, top_p = 0.95,
+        num_beams =16, #16
+        top_k = 120,  #120
+        top_p = 0.95, #0.95
         early_stopping = True,
         num_return_sequences = 1,
     )
@@ -302,8 +311,8 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        output_sents = generate_single(complex_sent, preprocessor = None)
-        #output_sents = generate(complex_sent, preprocessor=None)
+        #output_sents = generate_single(complex_sent, preprocessor = None)
+        output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
         #output_sents = back_translation(output_sents)
@@ -433,7 +442,7 @@ def evaluate_on_asset(features_kwargs, phase, model_dirname=None):
 
 
 def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
-    dataset = WIKI_DOC
+    dataset = WIKI_DOC_CLEAN
     model_dir = EXP_DIR / model_dirname
     output_dir = model_dir / 'outputs'
 
@@ -543,7 +552,13 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 # }
 
 ####### WIKI_DOC #######
-evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+#evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirname)
+
+####### WIKI_DOC_CLEAN ########
+# T5 Single (original loss): SARI: 48.96      D-SARI: 0.44    BLEU: 23.70     FKGL: 9.17 
+# T5_2 (original loss): SARI: 48.89      D-SARI: 0.43    BLEU: 11.53     FKGL: 6.78 
+# T5_2 10CosSim(ReLU)+20Sim+1Sum: SARI: 47.81      D-SARI: 0.43    BLEU: 18.65     FKGL: 9.08
+
 
 ### Original loss function ###
 ####### wiki-doc whole #######
@@ -566,9 +581,13 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 
 
 ####### D_WIKI #######
-#evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
 # T5 single: SARI: 44.72      D-SARI: 0.36    BLEU: 25.67     FKGL: 9.07
-# T5_2: SARI: 48.55      D-SARI: 0.38    BLEU: 17.77     FKGL: 7.06
+# T5_2: SARI: 48.65      D-SARI: 0.38    BLEU: 13.86     FKGL: 6.58
+# T5_2 key_num original loss: SARI: 48.28      D-SARI: 0.37    BLEU: 16.41     FKGL: 7.01
+# BART Single: SARI: 46.18      D-SARI: 0.37    BLEU: 20.65     FKGL: 8.35 
+
+# T5_2 5Sim+1Sum: SARI: 44.65
 
 ####### trained on D_wiki_small #######
 # T5 -8CosSim+20SimLoss+3SumLoss: SARI: 44.14      BLEU: 22.12     FKGL: 9.09 
@@ -576,6 +595,9 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 # T5          50SimLoss+1SumLoss: SARI: 45.12      D-SARI: 0.34    BLEU: 20.96     FKGL: 8.61
 # T5 -10CosSim+50SimLoss+1SumLoss: SARI: 45.14      D-SARI: 0.34    BLEU: 19.92     FKGL: 8.50 
 # T5 -10CosSim(ReLU)+50SimLoss+1SumLoss: SARI: 45.28      D-SARI: 0.34    BLEU: 19.64     FKGL: 8.40
+# T5 5KL + 20Sim + 1Sum: SARI: 46.53      D-SARI: 0.35    BLEU: 11.86     FKGL: 7.06 
+# T5 15KL + 20Sim + 1Sum: SARI: 46.69      D-SARI: 0.35    BLEU: 11.16     FKGL: 7.04
+# T5 key_num (from complex-sent): SARI: 47.16      D-SARI: 0.36    BLEU: 13.67     FKGL: 7.18 
 
 ### Original loss function ###
 # Bart (trained on wiki-doc-small): SARI: 42.57      BLEU: 12.57     FKGL: 8.85 
@@ -584,27 +606,6 @@ evaluate_on_WIKIDOC(phase='test', features_kwargs=None, model_dirname=model_dirn
 ### SimLoss + SumLoss ###
 # Bart (trained on wiki-doc-small): SARI: 42.75      BLEU: 7.66      FKGL: 8.02 
 
-# evaluate_on_WIKIDOC(features_kwargs=features_kwargs, 
-#                     phase='test', ratio = 0.7,
-#                     model_dirname=model_dirname)
-#### wikiparagh oldloss ####
-# original doc
-# C: 0.95         L: 0.68         WR: 0.82        DTD: 0.79       SARI: 39.24      BLEU: 8.90      FKGL: 10.03 
-
-# doc 0.1 summarization
-# C: 0.94         L: 0.61         WR: 0.79        DTD: 0.72       SARI: 36.48      BLEU: 6.88      FKGL: 8.88
-
-# doc 0.3 summarization
-# C: 0.94         L: 0.61         WR: 0.79        DTD: 0.72       SARI: 38.37      BLEU: 8.25      FKGL: 8.45 
-
-# doc 0.5 summarization
-# C: 0.95         L: 0.62         WR: 0.67        DTD: 0.72       SARI: 38.79      BLEU: 8.62      FKGL: 8.54
-
-# doc 0.7 summarization
-# C: 0.93         L: 0.62         WR: 0.68        DTD: 0.72       SARI: 39.55      BLEU: 9.60      FKGL: 8.38 
-
-# doc 0.9 summarization
-# C: 0.94         L: 0.67         WR: 0.74        DTD: 0.76       SARI: 39.74      BLEU: 10.63     FKGL: 8.60 
 
 
 ####### Turkcorpus #######

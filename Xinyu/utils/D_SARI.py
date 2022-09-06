@@ -310,7 +310,7 @@ def D_SARI_file(ssent, csent, rsents):
     D_SARI = 0
     for st, ct, rt in zip(ssent, csent, rsents):
         D_SARI += D_SARIsent(st, ct, [rt])[0]
-    return D_SARI / len(ssent)
+    return 100 * D_SARI / len(ssent)
 
 def main():
 

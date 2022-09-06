@@ -15,7 +15,7 @@ kw_model = KeyBERT(model = 'all-mpnet-base-v2')
 
 
 # model = Summarizer(model='distilbert-base-uncased')
-dataset = D_WIKI_SMALL
+dataset = D_WIKI
 
 phases = ['train', 'valid']
 
@@ -23,15 +23,19 @@ phases = ['train', 'valid']
 for ps in phases:
     simple_file_path = get_data_filepath(dataset,ps, 'simple')
     complex_file_path = get_data_filepath(dataset,ps, 'complex')
-    save_complex_summary_path = get_data_filepath(dataset,ps, 'complex_keyword')
+    save_complex_summary_path = get_data_filepath(dataset,ps, 'complex_keynumC')
     summary = []
     cnt=1
     for complex_sentence, simple_sentence in yield_sentence_pair(complex_file_path, simple_file_path):
-        key_words = kw_model.extract_keywords(simple_sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
+        key_words = kw_model.extract_keywords(complex_sentence, keyphrase_ngram_range=(1, 1), stop_words=None, top_n = 7, diversity = 0.5)
+        added = ''
         
         for i in range(min(3, len(key_words))):
-            #print(key_words[i])
+            #print(len(key_words[i]))
+            #added = added + key_words[i][0] + ' </s> '
             complex_sentence = key_words[i][0] + "_" + str(round(key_words[i][1],2)) + ' ' + complex_sentence
+        
+        #complex_sentence = added+complex_sentence
         summary.append(complex_sentence)
         cnt+=1
         print(cnt)

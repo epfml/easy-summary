@@ -70,7 +70,6 @@ class T5BaseLineFineTuned(pl.LightningModule):
 
         # set custom loss TRUE or FALSE
         self.args.device = 'cuda'
-        self.args.num_train_epochs=2
 #        self.args.learning_rate = 1e-4
 
 
@@ -452,8 +451,8 @@ def train(args):
     #torch.multiprocessing.set_start_method('spawn')
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #model = T5BaseLineFineTuned(args)
-    model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1661066252541905/checkpoint-epoch=2.ckpt')
+    model = T5BaseLineFineTuned(args)
+    #model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1661066252541905/checkpoint-epoch=2.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

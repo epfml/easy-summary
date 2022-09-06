@@ -24,8 +24,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from optuna.integration import PyTorchLightningPruningCallback
 #from new_model import SumSim, train
 #from Ts_BART import BartFineTuner, train
-from T5_2 import SumSim, train
-#from Bart2 import SumSim, train
+#from T5_2 import SumSim, train
+from Bart2 import SumSim, train
 #from Bart_baseline_finetuned import BartBaseLineFineTuned, train
 #from T5_baseline_finetuned import T5BaseLineFineTuned, train
 
@@ -125,12 +125,14 @@ def run_training(args, dataset):
     #     train(args)
 
 
-## MLO94 (tmux 0): T5_2 D_wiki (whole) 5Sim+1Sum
-## MLO95 (tmux 0): T5_2 D_wiki (whole) keyword_num  original loss
-## MLO98 (tmux 8): T5_2 wiki-doc-clean original loss
-## MLO98 (tmux 1): T5_2 D_wiki_small KL(QHW) seq_dim = 512 hidd_dim = 1 20Sim+1Sum+15KL
-## MLO95 (tmux 1): BART Single on D_wiki 
-## MLO96 (tmux 1): T5_2 D_wiki (whole) 20Sim+1Sum
+
+## MLO98 (tmux 1): T5_2 D_wiki 20Sim+1Sum-10CosSim(ReLU) 384Hidden_size (on epoch3)
+## MLO95 (tmux 0): T5_2 D_Wiki (whole) 20Sim+1Sum+15KL 512_SeqDim (on epoch3)
+## MLO94 (tmux 1): T5_2 D_wiki (whole) keynumC original loss (on epoch3)
+## MLO99 (tmux 0): T5_2 D_wiki 20Sim+1Sum-20CosSim(ReLU) 384Hidden_size (on epoch1)
+## MLO98 (tmux 0): T5_2 D_wiki 20Sim+1Sum+5KL 512_SeqDim (on epoch0)
+## MLO96 (tmux 0): T5_2 D_wiki 20Sim+1Sum+15KL 1024_SeqDim (on epoch0)
+## MLO96 (tmux 1): BART_2 D_wiki 20Sim+5Sum-10CosSim(ReLU) 384Hidden
 dataset = D_WIKI
 
 args = parse_arguments()
