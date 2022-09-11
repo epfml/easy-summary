@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 # -- end fix path --
-from preprocessor import DATASETS_DIR,PROCESSED_DATA_DIR,WIKI_DOC,WIKI_DOC_FILTER,WIKI_DOC_CLEAN,WIKI_PARAGH_FILTER_DATASET, WIKILARGE_DATASET,yield_sentence_pair,yield_lines, WIKI_PARA_DATASET, get_data_filepath, tokenize, write_lines
+from preprocessor import DATASETS_DIR,PROCESSED_DATA_DIR, D_WIKI_CLEAN, D_WIKI_MATCH, WIKI_DOC,WIKI_DOC_FILTER,WIKI_DOC_CLEAN,WIKI_PARAGH_FILTER_DATASET, WIKILARGE_DATASET,yield_sentence_pair,yield_lines, WIKI_PARA_DATASET, get_data_filepath, tokenize, write_lines
 import numpy as np
 from preprocessor import WIKILARGE_DATASET
 from rouge import Rouge
@@ -17,11 +17,10 @@ hf_model = pipeline("feature-extraction", model="distilbert-base-cased")
 
 kw_model = KeyBERT(model = 'all-mpnet-base-v2')
 
-dataset = WIKI_DOC_FILTER
+dataset = D_WIKI_CLEAN
 
 TYPES = ['complex', 'simple']
 PHASES = ['train', 'valid', 'test']
-HASH = '26ebb6aa762eac859c7b417fbb503eb7'
 
 rouge = Rouge()
 cnt = 0
@@ -40,8 +39,8 @@ cnt = 0
 #                     break
                 
 for ps in PHASES:
-    save_complex_path = get_data_filepath(WIKI_DOC_CLEAN, ps, 'complex')
-    save_simple_path = get_data_filepath(WIKI_DOC_CLEAN, ps, 'simple')
+    save_complex_path = get_data_filepath(D_WIKI_MATCH, ps, 'complex')
+    save_simple_path = get_data_filepath(D_WIKI_MATCH, ps, 'simple')
     simple_file_path = get_data_filepath(dataset,ps, 'simple')
     complex_file_path = get_data_filepath(dataset,ps, 'complex')
     cnt=0
@@ -50,14 +49,11 @@ for ps in PHASES:
     simple_lens = []
 
     for complex_sentence, simple_sentence in yield_sentence_pair(complex_file_path, simple_file_path):
-        sim_kw = kw_model.extract_keywords(simple_sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
-        com_kw = kw_model.extract_keywords(complex_sentence, keyphrase_ngram_range=(1, 1), stop_words=None)
+        sim_kw = kw_model.extract_keywords(simple_sentence, keyphrase_ngram_range=(1, 1), stop_words=None,top_n = 7, use_mmr = True,diversity = 0.5)
+        com_kw = kw_model.extract_keywords(complex_sentence, keyphrase_ngram_range=(1, 1), stop_words=None, top_n = 7, use_mmr = True,diversity = 0.5)
 
         simlist = []
 
-        tot+=1
-        if tot%10==0:
-            print(tot)
 
         for i in range(min(5, len(sim_kw))):
             simlist.append(sim_kw[i][0])
@@ -66,6 +62,8 @@ for ps in PHASES:
         for i in range(min(5, len(com_kw))):
             if com_kw[i][0] in simlist:
                 #cnt+=1
+                tot+=1
+                print(tot)
                 complex_lens.append(complex_sentence)
                 simple_lens.append(simple_sentence)
                 break

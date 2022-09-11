@@ -51,8 +51,12 @@ WIKI_DOC_MID = 'wiki_doc_mid'
 WIKI_PARAGH_SMALL = 'wiki_paragh_small'
 D_WIKI = 'D_wiki'
 D_WIKI_SMALL = 'D_wiki_small'
+D_WIKI_CLEAN = 'D_wiki_clean'
+D_WIKI_MATCH = 'D_wiki_match'
 WIKI_DOC_FILTER = 'wiki_doc_filter'
 WIKI_DOC_CLEAN = 'wiki_doc_clean'
+WIKI_DOC_MATCH = 'wiki_doc_match'
+
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"
 WORD_FREQUENCY_FILEPATH = RESOURCES_DIR /'enwiki-words-frequency.txt'

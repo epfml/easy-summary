@@ -63,8 +63,10 @@ class T5BaseLineFineTuned(pl.LightningModule):
         self.save_hyperparameters()
         
         # Load pre-trained model and tokenizer
-        self.model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_T5_FineTuned_WikiLarge/checkpoint-epoch=2.ckpt')
-        self.model =  self.model.model.to(self.args.device)
+        # self.model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_T5_FineTuned_WikiLarge/checkpoint-epoch=2.ckpt')
+        # self.model =  self.model.model.to(self.args.device)
+        self.model = T5ForConditionalGeneration.from_pretrained(self.args.sim_model)
+        self.model = self.model.to(self.device)
         self.tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
 
@@ -163,8 +165,8 @@ class T5BaseLineFineTuned(pl.LightningModule):
                 attention_mask = attention_mask,
                 do_sample = True,
                 max_length = 256,
-                num_beams = 8,
-                top_k = 130,
+                num_beams = 16,
+                top_k = 120,
                 top_p = 0.95,
                 early_stopping = True,
                 num_return_sequences = 1
@@ -265,12 +267,12 @@ class T5BaseLineFineTuned(pl.LightningModule):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       p.add_argument('-Simplifier','--sim_model', default='t5-base')
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
       p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
-      p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
+      p.add_argument('-WeightDecay','--weight_decay', default = 0.0001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
       p.add_argument('-NumEpoch','--num_train_epochs',default=5)
       p.add_argument('-CosLoss','--custom_loss', default=False)

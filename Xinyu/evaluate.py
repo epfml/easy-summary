@@ -16,16 +16,16 @@ import json
 from preprocessor import Preprocessor
 import torch
 from transformers import T5ForConditionalGeneration, T5TokenizerFast
-from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DIR, WIKI_DOC, D_WIKI,WIKI_DOC_CLEAN
+from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DIR, WIKI_DOC, D_WIKI,WIKI_DOC_CLEAN, D_WIKI_CLEAN,D_WIKI_MATCH
 from preprocessor import write_lines, yield_lines, count_line, read_lines, generate_hash
 from easse.sari import corpus_sari
 import time
 from utils.D_SARI import D_SARIsent
 from googletrans import Translator
-from Bart2 import SumSim
+#from Bart2 import SumSim
 #from T5_2 import SumSim
 #from T5_baseline_finetuned import T5BaseLineFineTuned
-#from Bart_baseline_finetuned import BartBaseLineFineTuned
+from Bart_baseline_finetuned import BartBaseLineFineTuned
 
 from keybert import KeyBERT
 from transformers.pipelines import pipeline
@@ -77,20 +77,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
 #model_dirname = 'exp_DWiki_T5'
-model_dirname = 'exp_DWiki_BART'
+model_dirname = 'exp_DWikiMatch_BARTSingle'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=2.ckpt'
+checkpoint_path = 'checkpoint-epoch=1.ckpt'
 
 # load the model
-# Model = T5BaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-# model = Model.model.to(device)
-# tokenizer = Model.tokenizer
+Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+model = Model.model.to(device)
+tokenizer = Model.tokenizer
 
-Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
-summarizer = Model.summarizer.to(device)
-simplifier = Model.simplifier.to(device)
-summarizer_tokenizer = Model.summarizer_tokenizer
-simplifier_tokenizer = Model.simplifier_tokenizer
+# Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+# summarizer = Model.summarizer.to(device)
+# simplifier = Model.simplifier.to(device)
+# summarizer_tokenizer = Model.summarizer_tokenizer
+# simplifier_tokenizer = Model.simplifier_tokenizer
 # translator = Translator()
 
 def generate_single(sentence, preprocessor = None):
@@ -100,7 +100,7 @@ def generate_single(sentence, preprocessor = None):
     # for i in range(min(3, len(key_words))):
     #     sentence = key_words[i][0] + "_" + str(round(key_words[i][1],2)) + ' ' +sentence
     
-    text = "simplify: " + sentence
+    #text = "simplify: " + sentence
     text = sentence
     encoding = tokenizer(text, max_length=256,
                                      padding='max_length',
@@ -113,11 +113,11 @@ def generate_single(sentence, preprocessor = None):
     beam_outputs = model.generate(
         input_ids=input_ids,
         attention_mask=attention_masks,
-        do_sample=False,
+        do_sample=True,
         max_length=max_len,
-        num_beams=10,
-        top_k=130,
-        top_p=0.97,
+        num_beams=20,
+        top_k=120,
+        top_p=0.95,
         early_stopping=True,
         num_return_sequences=1,
     )
@@ -134,7 +134,7 @@ def generate(sentence, preprocessor=None):
     #     sentence = key_words[i][0] + "_" + str(round(key_words[i][1],2)) + ' ' +sentence
     
     # For T5
-    #sentence = 'summarize ' + sentence
+    sentence = 'summarize ' + sentence
 
     encoding = summarizer_tokenizer(
         [sentence],
@@ -146,7 +146,7 @@ def generate(sentence, preprocessor=None):
     
     summary_ids = summarizer.generate(
         encoding['input_ids'].to(device),
-        num_beams = 10,
+        num_beams = 15,
         min_length = 10,
         max_length = 256,
     ).to(device)
@@ -164,7 +164,7 @@ def generate(sentence, preprocessor=None):
         attention_mask = summary_atten_mask,
         do_sample = True,
         max_length = 256,
-        num_beams =16, #16
+        num_beams =20, #16
         top_k = 120,  #120
         top_p = 0.95, #0.95
         early_stopping = True,
@@ -311,8 +311,8 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        #output_sents = generate_single(complex_sent, preprocessor = None)
-        output_sents = generate(complex_sent, preprocessor=None)
+        output_sents = generate_single(complex_sent, preprocessor = None)
+        #output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
         #output_sents = back_translation(output_sents)
@@ -492,7 +492,7 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
         print("".join(read_lines(output_score_filepath)))
 
 def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
-    dataset = D_WIKI
+    dataset = D_WIKI_MATCH
     model_dir = EXP_DIR / model_dirname
     output_dir = model_dir / 'outputs'
 

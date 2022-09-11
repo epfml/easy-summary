@@ -11,7 +11,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 
-from preprocessor import D_WIKI,D_WIKI_SMALL, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN
+from preprocessor import D_WIKI,D_WIKI_SMALL,D_WIKI_CLEAN, D_WIKI_MATCH, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN
 import time
 import json
 
@@ -24,8 +24,8 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from optuna.integration import PyTorchLightningPruningCallback
 #from new_model import SumSim, train
 #from Ts_BART import BartFineTuner, train
-#from T5_2 import SumSim, train
-from Bart2 import SumSim, train
+from T5_2 import SumSim, train
+#from Bart2 import SumSim, train
 #from Bart_baseline_finetuned import BartBaseLineFineTuned, train
 #from T5_baseline_finetuned import T5BaseLineFineTuned, train
 
@@ -36,13 +36,13 @@ def parse_arguments():
     p.add_argument('-t', '--trials', type=int, default=5,
                   help='number of trials for hyperparameter search')
     p.add_argument('--seed', type=int, default=42, help='randomization seed')
-    p.add_argument('--features_kwargs', default= {
-    # 'WordRatioFeature': {'target_ratio': 0.8},
-    'CharRatioFeature': {'target_ratio': 0.8},
-    'LevenshteinRatioFeature': {'target_ratio': 0.8},
-    'WordRankRatioFeature': {'target_ratio': 0.8},
-    'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
-})
+#     p.add_argument('--features_kwargs', default= {
+#     # 'WordRatioFeature': {'target_ratio': 0.8},
+#     'CharRatioFeature': {'target_ratio': 0.8},
+#     'LevenshteinRatioFeature': {'target_ratio': 0.8},
+#     'WordRankRatioFeature': {'target_ratio': 0.8},
+#     'DependencyTreeDepthRatioFeature': {'target_ratio': 0.8}
+# })
     #p = T5FineTuner.add_model_specific_args(p)
     p = SumSim.add_model_specific_args(p)
     #p = BartFineTuner.add_model_specific_args(p)
@@ -126,14 +126,21 @@ def run_training(args, dataset):
 
 
 
-## MLO98 (tmux 1): T5_2 D_wiki 20Sim+1Sum-10CosSim(ReLU) 384Hidden_size (on epoch3)
-## MLO95 (tmux 0): T5_2 D_Wiki (whole) 20Sim+1Sum+15KL 512_SeqDim (on epoch3)
-## MLO94 (tmux 1): T5_2 D_wiki (whole) keynumC original loss (on epoch3)
-## MLO99 (tmux 0): T5_2 D_wiki 20Sim+1Sum-20CosSim(ReLU) 384Hidden_size (on epoch1)
-## MLO98 (tmux 0): T5_2 D_wiki 20Sim+1Sum+5KL 512_SeqDim (on epoch0)
-## MLO96 (tmux 0): T5_2 D_wiki 20Sim+1Sum+15KL 1024_SeqDim (on epoch0)
-## MLO96 (tmux 1): BART_2 D_wiki 20Sim+5Sum-10CosSim(ReLU) 384Hidden
-dataset = D_WIKI
+     ## MLO98 (tmux 1): T5_2 D_wiki 20Sim+1Sum-10CosSim(ReLU) 384Hidden_size (on epoch3)
+     ## MLO95 (tmux 0): T5_2 D_Wiki (whole) 20Sim+1Sum+15KL 512_SeqDim (on epoch3)
+
+
+    ## T5_2 D_wiki_small 1Sim+0.5Sum+0.5KL 1024_SeqDim (epoch 2 best) 0.54186
+    ## T5_2 D_wiki_small original loss 0.54288
+    ## T5_2 D_wiki_small 1Sim+0.5Sum+1KL 1024_SeqDim (epoch  best)0.54309
+    ## T5_2 D_wiki_small 1Sim+0.5Sum-0.5CosSim(ReLU) 768Hidden 0.55825
+## MLO95 (tmux 0): T5_2 D_wiki_match 1Sim+0.001Sum-0.1CosSim(ReLU) 384Hidden
+## MLO94 (tmux 1): T5_2 D_wiki_match 1Sim+0.001Sum+0.1KL 1024_SeqDim
+## MLO97 (tmux 0): T5_2 D_wiki_match original loss 
+## MLO99 (tmux 0): T5_2 D-wiki_match 1Sim+0.001Sum+0.5KL 1024_SeqDim
+## MLO96 (tmux 0): T5_2 D-wiki-match 1Sim+0.001Sum-0.05CosSim(ReLU) 384Hidden
+## MLO98 (tmux 1): T5_2 D-wiki-match 1Sim+0.01Sum-0.1CosSim(ReLU) 384Hidden
+dataset = D_WIKI_MATCH
 
 args = parse_arguments()
 run_training(args, dataset)

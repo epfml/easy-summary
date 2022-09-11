@@ -37,7 +37,8 @@ from transformers import (
     T5TokenizerFast,
     BertTokenizer, BertForPreTraining,
     BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
-    get_linear_schedule_with_warmup, AutoConfig, AutoModel
+    get_linear_schedule_with_warmup, AutoConfig, AutoModel,
+    get_cosine_schedule_with_warmup
 )
 from Ts_T5 import T5FineTuner
 from Ts_BART import BartFineTuner
@@ -97,10 +98,10 @@ class SumSim(pl.LightningModule):
         self.simplifier = self.simplifier.to(self.args.device)
 
         self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
-        #self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
+        self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
+        #self.relu = nn.ReLU()
+        self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
         #self.W2 = torch.randn((int(self.args.hidden_size), 1), requires_grad=True, device = self.args.device)
-        self.relu = nn.ReLU()
-        #self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
         
 
 
@@ -160,9 +161,10 @@ class SumSim(pl.LightningModule):
         # generate summary
         summary_ids = self.summarizer.generate(
             inputs['input_ids'].to(self.args.device),
-            num_beams = 10,
+            num_beams = 16,
             min_length = 10,
-            max_length = 256
+            max_length = 256,
+            top_k=120,top_p=0.95,
         ).to(self.args.device)
 
         ### Original loss
@@ -197,12 +199,23 @@ class SumSim(pl.LightningModule):
         H2 = sim_outputs.encoder_last_hidden_state
         
         ## CosSim
+        # Rep1 = torch.matmul(H1, self.W)
+        # Rep2 = torch.matmul(H2, self.W)
+        # Rep1 = self.relu(Rep1)
+        # Rep2 = self.relu(Rep2)
+        # CosSim = nn.CosineSimilarity(dim=2, eps=1e-6)
+        # sim_score = CosSim(Rep1, Rep2)
+
+        ## KL loss
+        H1 = torch.transpose((torch.transpose(H1, 1,2)@self.Q), 1,2)
+        H2 = torch.transpose((torch.transpose(H2, 1,2)@self.Q), 1,2)
         Rep1 = torch.matmul(H1, self.W)
         Rep2 = torch.matmul(H2, self.W)
-        Rep1 = self.relu(Rep1)
-        Rep2 = self.relu(Rep2)
-        CosSim = nn.CosineSimilarity(dim=2, eps=1e-6)
-        sim_score = CosSim(Rep1, Rep2)
+        Rep1 = Rep1.squeeze(dim=2)
+        Rep2 = Rep2.squeeze(dim=2)
+        LogSoftMax = nn.LogSoftmax(dim=1)
+        Rep1 = LogSoftMax(Rep1)
+        Rep2 = LogSoftMax(Rep2)
 
         if self.args.custom_loss:
             '''
@@ -215,10 +228,10 @@ class SumSim(pl.LightningModule):
             loss = sim_outputs.loss * self.args.w1
             loss += sum_outputs.loss * self.args.w2
             ### KL ###
-            #loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
+            loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
             
             ### CosSim ###
-            loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
+            #loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
 
 
@@ -227,7 +240,7 @@ class SumSim(pl.LightningModule):
             # self.manual_backward(loss)
             # self.opt.step()
             
-            self.log('train_loss', loss, on_step=True, prog_bar=True, logger=True)
+            self.log('train_loss', sim_outputs.loss, on_step=True, prog_bar=True, logger=True)
             # print(loss)
             return loss
         else:
@@ -261,7 +274,7 @@ class SumSim(pl.LightningModule):
             # generate summary
             summary_ids = self.summarizer.generate(
                 inputs['input_ids'].to(self.args.device),
-                num_beams = 10,
+                num_beams = 16,
                 min_length = 30,
                 max_length = 256,
                 top_k = 120, top_p = 0.95,
@@ -327,9 +340,9 @@ class SumSim(pl.LightningModule):
             {
                 "params": self.W
             },
-            # {
-            #     "params": self.Q
-            # },
+            {
+                "params": self.Q
+            },
             # {
             #     "params": self.W2
             # }
@@ -369,7 +382,10 @@ class SumSim(pl.LightningModule):
                    // self.args.gradient_accumulation_steps
                    * float(self.args.num_train_epochs)
                    )
-        scheduler = get_linear_schedule_with_warmup(
+        # scheduler = get_linear_schedule_with_warmup(
+        #     self.opt, num_warmup_steps=self.args.warmup_steps, num_training_steps=t_total
+        # )
+        scheduler = get_cosine_schedule_with_warmup(
             self.opt, num_warmup_steps=self.args.warmup_steps, num_training_steps=t_total
         )
         self.lr_scheduler = scheduler
@@ -387,19 +403,20 @@ class SumSim(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       # facebook/bart-base
-      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 384)
-      p.add_argument('-SeqDim','--seq_dim', type=int, default = 1024)
+      p.add_argument('-HiddenSize','--hidden_size',type=int, default = 1)
+      p.add_argument('-SeqDim','--seq_dim', type=int, default = 512)
       p.add_argument('-Weight1', '--w1', type = int, default = 20)
-      p.add_argument('-Weight2', '--w2', type = int, default = 5)
+      p.add_argument('-Weight2', '--w2', type = int, default = 1)
       p.add_argument('-Lambda', '--lambda_', type = int, default = 10)
+      # BRIO: Yale-LILY/brio-cnndm-uncased
       p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
       p.add_argument('-Simplifier','--sim_model', default='facebook/bart-base')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=8)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=8)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
+      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
-      p.add_argument('-WeightDecay','--weight_decay', default = 0.001)
+      p.add_argument('-WeightDecay','--weight_decay', default = 3e-4)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
       p.add_argument('-NumEpoch','--num_train_epochs',default=5)
       p.add_argument('-CosLoss','--custom_loss', default=True)
@@ -554,7 +571,7 @@ def train(args):
         monitor="val_loss",
         verbose=True,
         mode="min",
-        save_top_k=3
+        save_top_k=1
     )
     bar_callback = pl.callbacks.TQDMProgressBar(refresh_rate=1)
     metrics_callback = MetricsCallback()
