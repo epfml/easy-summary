@@ -58,7 +58,7 @@ class BartFineTuner(pl.LightningModule):
         self.args = args
         self.save_hyperparameters()
         # Load pre-trained model and tokenizer
-        self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
+        self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model,forced_bos_token_id=0)
         self.tokenizer = BartTokenizer.from_pretrained(self.args.sum_model)
         self.model = self.model.to(self.args.device)
 
@@ -195,8 +195,13 @@ class BartFineTuner(pl.LightningModule):
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
-                "params": [p for n,p in model.named_parameters()]
-            }
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+                                "weight_decay": self.args.weight_decay,
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+                "weight_decay": 0.0,
+            },
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         self.opt = optimizer

@@ -64,7 +64,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
         #self.model = self.model.model.to(self.args.device)
         self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
         self.model = self.model.to(self.args.device)
-        self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
+        self.tokenizer = BartTokenizer.from_pretrained(self.args.sum_model)
         
 #        self.args.learning_rate = 1e-4
 
@@ -258,16 +258,16 @@ class BartBaseLineFineTuned(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      # facebook/bart-base
-      p.add_argument('-Summarizer','--sum_model', default='facebook/bart-large-cnn')
-      p.add_argument('-TrainBS','--train_batch_size',type=int, default=4)
-      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=4)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      # facebook/bart-base Yale-LILY/brio-cnndm-uncased
+      p.add_argument('-Summarizer','--sum_model', default='Yale-LILY/brio-cnndm-uncased')
+      p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
+      p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
+      p.add_argument('-lr','--learning_rate',type=float, default=5e-5)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.0001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=5)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=10)
       p.add_argument('-CosLoss','--custom_loss', default=False)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())

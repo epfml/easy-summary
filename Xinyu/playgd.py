@@ -49,17 +49,18 @@ tokenizer = T5Tokenizer.from_pretrained('t5-base')
 # in the text, whereas these neural approaches can capture long-term
 # semantic dependencies and context of words in a text.
 # """.replace("\n", " ")
-sent = ['The cat sits outside', 'The new movie is awesome']
+sent = ['summarize: The cat sits outside', 'summarize: The new movie is awesome']
 tg = ['The dog plays in the garden', 'The new movie is so great']
+kws = ['cat_0.5 sits_0.5 outside_0.5', 'movie_0.5 awesome_0.5 new_0.5']
 
 #Compute embedding for both lists
-embeddings1 = comparer.encode(sent, convert_to_tensor=True)
-embeddings2 = comparer.encode(tg, convert_to_tensor=True)
+# embeddings1 = comparer.encode(sent, convert_to_tensor=True)
+# embeddings2 = comparer.encode(tg, convert_to_tensor=True)
 
-print(embeddings1.shape)
-#Compute cosine-similarities
-cosine_scores = util.cos_sim(embeddings1, embeddings2)
-print(cosine_scores)
+# print(embeddings1.shape)
+# #Compute cosine-similarities
+# cosine_scores = util.cos_sim(embeddings1, embeddings2)
+# print(cosine_scores)
 
 # sim_tgt = 'jason thomas kenney pc mla ( born may 30 , 1968 ) is a canadian politician . he is the 18th premier of alberta since 30 april 2019 , and leader of the united conservative party in alberta since 2017.kenney was inspired to enter politics after having a short conversation with former prime minister john diefenbaker at an early age . '
 # hf_model = pipeline("feature-extraction", model="distilbert-base-cased")
@@ -131,7 +132,18 @@ labels = tgt['input_ids'].to(device)
 labels[labels[:,:] == tokenizer.pad_token_id] = -100
 decoder_attention_mask = tgt['attention_mask'].to(device)
 
+kw_encoding = tokenizer(
+    kws,
+    max_length = max_seq,
+    truncation = True,
+    padding = 'max_length',
+    return_tensors = 'pt'
+).to(device)
 
+kw_ids = kw_encoding['input_ids'].to(device)
+print("kw_ids: ", kw_ids.shape)
+print("kw_ids[0]: ", kw_ids[0])
+print('decode: ', tokenizer.decode(kw_ids[0], skip_special_tokens=True))
 # for src_id in src_ids:
 #     # add tokens in front of the src_id
 #     tokens = torch.tensor([18356, 10]).to(device)
@@ -159,20 +171,33 @@ summary_ids = model.generate(
     max_length=256,
 ).to(device)
 
+print('decode: ', tokenizer.batch_decode(summary_ids, skip_special_tokens=True))
+ 
 # (1,98) --> (1,48)
-print(summary_ids)
-print(summary_ids.shape)
+# print(summary_ids)
+# print(summary_ids.shape)
 
 padded_summary_ids = torch.zeros((summary_ids.shape[0], max_seq), dtype = torch.long).fill_(tokenizer.pad_token_id).to(device)
-
 for i, summary_id in enumerate(summary_ids):
     print(summary_id.shape)
     padded_summary_ids[i, :summary_id.shape[0]] = summary_id
+    
+for i, pad_summary_id in enumerate(padded_summary_ids):
+    added = kw_ids[i]
+    # get non-zero elements
+    added = added[added != 0]
+    #print(added)
+    new_ = torch.cat((added,pad_summary_id), dim=0)[:max_seq]
+    # add "simplify: " token
+    padded_summary_ids[i] = torch.cat((torch.tensor([18356, 10]).to(device), new_), dim=0)[:max_seq]
+   
+
 
 print("padding summary_ids: ",padded_summary_ids.shape)
 attention_mask = torch.ones(padded_summary_ids.shape).to(device)
 print(tokenizer.pad_token_id)
 attention_mask[padded_summary_ids[:,:]==tokenizer.pad_token_id]=0
+print(tokenizer.batch_decode(padded_summary_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True))
 
 
 tmpids = model.generate(
@@ -202,24 +227,24 @@ H2 = outputs.encoder_last_hidden_state
 print(outputs.encoder_last_hidden_state.shape)
 #print(outputs.decoder_hidden_states[1].shape)
 
-print(util.cos_sim(H2.mean(dim = 1),H1.mean(dim=1)))
+# print(util.cos_sim(H2.mean(dim = 1),H1.mean(dim=1)))
 
-W = torch.randn((768, 1), requires_grad=True).to(device)
-Q = torch.randn((max_seq, 512), requires_grad = True).to(device)
+# W = torch.randn((768, 1), requires_grad=True).to(device)
+# Q = torch.randn((max_seq, 512), requires_grad = True).to(device)
 
-r1 = torch.transpose((torch.transpose(H1, 1,2) @ Q), 1,2)
-r2 = torch.transpose((torch.transpose(H2, 1,2) @ Q), 1,2)
+# r1 = torch.transpose((torch.transpose(H1, 1,2) @ Q), 1,2)
+# r2 = torch.transpose((torch.transpose(H2, 1,2) @ Q), 1,2)
 
-print(r1.shape, r2.shape)
+# print(r1.shape, r2.shape)
 
-r1 = torch.matmul(r1, W)
-print(r1.shape)
-r2 = torch.matmul(r2, W)
-print(r2.shape)
+# r1 = torch.matmul(r1, W)
+# print(r1.shape)
+# r2 = torch.matmul(r2, W)
+# print(r2.shape)
 
-r1 = r1.squeeze(dim=2)
-opt = nn.LogSoftmax(dim=1) 
-print(opt(r1).shape)
+# r1 = r1.squeeze(dim=2)
+# opt = nn.LogSoftmax(dim=1) 
+# print(opt(r1).shape)
 
 
 

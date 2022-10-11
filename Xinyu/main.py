@@ -11,7 +11,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 
-from preprocessor import D_WIKI,D_WIKI_SMALL,D_WIKI_CLEAN, D_WIKI_MATCH, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN
+from preprocessor import D_WIKI,D_WIKI_SMALL,D_WIKI_CLEAN, D_WIKI_MATCH, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN, WIKI_DOC_MATCH
 import time
 import json
 
@@ -130,17 +130,39 @@ def run_training(args, dataset):
      ## MLO95 (tmux 0): T5_2 D_Wiki (whole) 20Sim+1Sum+15KL 512_SeqDim (on epoch3)
 
 
-    ## T5_2 D_wiki_small 1Sim+0.5Sum+0.5KL 1024_SeqDim (epoch 2 best) 0.54186
-    ## T5_2 D_wiki_small original loss 0.54288
-    ## T5_2 D_wiki_small 1Sim+0.5Sum+1KL 1024_SeqDim (epoch  best)0.54309
-    ## T5_2 D_wiki_small 1Sim+0.5Sum-0.5CosSim(ReLU) 768Hidden 0.55825
-## MLO95 (tmux 0): T5_2 D_wiki_match 1Sim+0.001Sum-0.1CosSim(ReLU) 384Hidden
-## MLO94 (tmux 1): T5_2 D_wiki_match 1Sim+0.001Sum+0.1KL 1024_SeqDim
-## MLO97 (tmux 0): T5_2 D_wiki_match original loss 
-## MLO99 (tmux 0): T5_2 D-wiki_match 1Sim+0.001Sum+0.5KL 1024_SeqDim
-## MLO96 (tmux 0): T5_2 D-wiki-match 1Sim+0.001Sum-0.05CosSim(ReLU) 384Hidden
-## MLO98 (tmux 1): T5_2 D-wiki-match 1Sim+0.01Sum-0.1CosSim(ReLU) 384Hidden
-dataset = D_WIKI_MATCH
+    ## T5_2 D-wiki_match keyword_num3_div0.5 0.53460 -> 0.52810 -> 0.52764 -> 0.52101 -> 0.51956 -> 0.51941 -> 0.51896
+    ## T5_2 D_wiki-match 1Sim-0.5CosSim(ReLU)(H_sim*W, H2*W)0.54373 -> 0.52729 -> 0.51991 -> 0.51864
+    ## T5_2 D_wiki_match 1Sim-0.01CosSim(ReLU)(H_sim*W, H2*W) 0.53203 -> 0.52532 -> 0.52503 -> 0.51998 -> 0.51843 -> 0.51641
+    ## T5_2 D_wiki_match 1Sim-0.1CosSim(ReLU)(H_sim*W, H2*W) 0.53762 -> 0.52782 -> 0.52212
+    ## T5_2 D_wiki_match 1Sim-1CosSim(ReLU)(H_sim*W, H2*W) 0.57321 -> 0.52840 -> 0.52626 -> 0.52005
+    ## T5_2 D-wiki-match kw3_div0.7_sep 0.53773 -> 0.52873 -> 0.52608 -> 0.52495 -> 0.52211 -> 0.52148
+    ## T5_2 D_wiki_match kw_num3_div0.7 (label smoothing 0.1) 0.53183 -> 0.52506 -> 0.52374 -> 0.51900 -> 0.51856 -> 0.51732
+    ## T5_2 D-wiki-match kw_num3_div0.7 0.52716 -> 0.52635 -> 0.52135 -> 0.52082 -> 0.51680 -> 0.51622 -> 0.51512 -> 0.51467
+    ## T5_2 D_wiki_match kw_num4_div0.7 0.52805 -> 0.52301 -> 0.52188 -> 0.51986 -> 0.51751 -> 0.51531
+    ## T5_2 D_wiki_match kw_num4_div0.9 0.53169 -> 0.52616 -> 0.52415 -> 0.51839 -> 0.51835 -> 0.51590
+    ## T5_2 D-wiki-match kw_num3_div0.9 0.53095 -> 0.52483 -> 0.52011 -> 0.51872 -> 0.51796 -> 0.51628
+    ## T5_2 D-wiki-match kw_num3_div0.9 (label smoothing 0.1) 0.53295 -> 0.52955 -> 0.52592 -> 0.52094 -> 0.51802
+    ## T5_2 D_wiki_match 1Sim-0.5CosSim(H_sim, H2) 0.65300
+    ## T5_2 D_wiki_match 1Sim+1Sum 0.57021 -> 0.56645
+
+
+
+##STOP- MLO97 (tmux 0): T5_2 D_wiki_match original loss 0.52277 -> 0.52057
+##STOP- MLO100 (tmux 0): T5_2 D_wiki_match 1Sim+0.1Sum 0.57238
+##STOP- MLO95 (tmux 1): T5_2 Wiki_Doc_match kw_num4_div0.7
+##STOP- MLO100 (tmux 0): T5_2 D_wiki_match 1Sim+0.1Sum 0.57238
+##STOP- MLO96 (tmux 0): T5_2 D_wiki_match 1Sim+0.01Sum 0.58517
+## MLO94 (tmux 1): T5_2 D_wiki_match 1Sim-2CosSim(ReLU)(H_sim*W, H2*W) 0.52839 -> 0.52745 -> 0.52084 -> 0.52016
+##STOP- MLO100 (tmux 0): T5_2 D_wiki_match 1Sim+0.001Sum 0.56481
+##STOP- MLO99 (tmux 0): T5_2 D_wiki_match (1st stage freeze) original loss 0.53515 -> 0.52706 -> 0.52037 -> 0.51967 -> 0.51731
+## MLO96 (tmux 1): T5_2 D_Wiki_match 1Sim-0.001CosSim(ReLU)(H_sim*W, H2*W) 0.53350 -> 0.52613
+##STOP- MLO98 (tmux 0): continue T5_2 D_wiki_match original loss 0.51914 -> 0.51888 -> 0.51751
+##STOP- MLO95 (tmux 0): continue T5_2 D_wiki_match kw_num3_div0.7 0.51502
+## MLO94 (tmux 0): T5_2 wiki_doc_match 1Sim-0.01CosSim(ReLU)(H_sim*W, H2*W) 0.50801
+## MLO95 (tmux 0): T5_2 wiki_doc_match 1Sim-0.1CosSim(ReLU)(H_sim*W, H2*W) 0.51155 -> 0.51122
+## MLO98 (tmux 0): T5_2 wiki_doc_match 1Sim-0.5CosSim(ReLU)(H_sim*W, H2*W) 0.53176 -> 0.53067
+    ## MLO96 (tmux 1): T5_2 D_wiki-match 1Sim-1CosSim(ReLU)(H_sim, H2) 0.61288
+dataset = WIKI_DOC_MATCH
 
 args = parse_arguments()
 run_training(args, dataset)

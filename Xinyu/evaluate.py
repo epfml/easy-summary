@@ -23,7 +23,7 @@ import time
 from utils.D_SARI import D_SARIsent
 from googletrans import Translator
 #from Bart2 import SumSim
-#from T5_2 import SumSim
+from T5_2 import SumSim
 #from T5_baseline_finetuned import T5BaseLineFineTuned
 from Bart_baseline_finetuned import BartBaseLineFineTuned
 
@@ -77,20 +77,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
 #model_dirname = 'exp_DWiki_T5'
-model_dirname = 'exp_DWikiMatch_BARTSingle'
+model_dirname = 'exp_DWikiMatch_T5_kw_num3_div0.7'
 #model_dirname = 'exp_WikiDocSmall_BART_CosSim+SumSimLoss'
-checkpoint_path = 'checkpoint-epoch=1.ckpt'
+checkpoint_path = 'checkpoint-epoch=6.ckpt'
 
 # load the model
-Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
-model = Model.model.to(device)
-tokenizer = Model.tokenizer
+# Model = BartBaseLineFineTuned.load_from_checkpoint(EXP_DIR / model_dirname / checkpoint_path).to(device)
+# model = Model.model.to(device)
+# tokenizer = Model.tokenizer
 
-# Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
-# summarizer = Model.summarizer.to(device)
-# simplifier = Model.simplifier.to(device)
-# summarizer_tokenizer = Model.summarizer_tokenizer
-# simplifier_tokenizer = Model.simplifier_tokenizer
+Model = SumSim.load_from_checkpoint(EXP_DIR /  model_dirname / checkpoint_path).to(device)
+summarizer = Model.summarizer.to(device)
+simplifier = Model.simplifier.to(device)
+summarizer_tokenizer = Model.summarizer_tokenizer
+simplifier_tokenizer = Model.simplifier_tokenizer
 # translator = Translator()
 
 def generate_single(sentence, preprocessor = None):
@@ -134,7 +134,7 @@ def generate(sentence, preprocessor=None):
     #     sentence = key_words[i][0] + "_" + str(round(key_words[i][1],2)) + ' ' +sentence
     
     # For T5
-    sentence = 'summarize ' + sentence
+    sentence = 'summarize: ' + sentence
 
     encoding = summarizer_tokenizer(
         [sentence],
@@ -146,9 +146,10 @@ def generate(sentence, preprocessor=None):
     
     summary_ids = summarizer.generate(
         encoding['input_ids'].to(device),
-        num_beams = 15,
+        num_beams = 20,
         min_length = 10,
         max_length = 256,
+        top_k = 120, top_p = 0.97
     ).to(device)
     
     # For T5
@@ -163,10 +164,10 @@ def generate(sentence, preprocessor=None):
         input_ids = summary_ids,
         attention_mask = summary_atten_mask,
         do_sample = True,
-        max_length = 256,
-        num_beams =20, #16
+        max_length = 1024,
+        num_beams =5, #16
         top_k = 120,  #120
-        top_p = 0.95, #0.95
+        top_p = 0.97, #0.95
         early_stopping = True,
         num_return_sequences = 1,
     )
@@ -311,8 +312,8 @@ def simplify_file(complex_filepath, output_filepath, features_kwargs=None, model
     output_file = Path(output_filepath).open("w")
 
     for n_line, complex_sent in enumerate(yield_lines(complex_filepath), start=1):
-        output_sents = generate_single(complex_sent, preprocessor = None)
-        #output_sents = generate(complex_sent, preprocessor=None)
+        #output_sents = generate_single(complex_sent, preprocessor = None)
+        output_sents = generate(complex_sent, preprocessor=None)
         
         # apply back translation
         #output_sents = back_translation(output_sents)
@@ -493,17 +494,18 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
 
 def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
     dataset = D_WIKI_MATCH
+
     model_dir = EXP_DIR / model_dirname
     output_dir = model_dir / 'outputs'
 
     output_dir.mkdir(parents = True, exist_ok = True)
     #features_hash = generate_hash(features_kwargs)
     output_score_filepath = output_dir / f'score_{dataset}_{phase}.log.txt'
-    complex_filepath =get_data_filepath(dataset, phase, 'complex')
+    complex_filepath =get_data_filepath(dataset, phase, 'complex_kw_num3_div0.7')
     
     if not output_score_filepath.exists() or count_line(output_score_filepath)==0:
         start_time = time.time()
-        complex_filepath =get_data_filepath(dataset, phase, 'complex')
+        complex_filepath =get_data_filepath(dataset, phase, 'complex_kw_num3_div0.7')
         
         #complex_filepath = get_data_filepath(dataset, phase, 'complex_summary_'+str(ratio))
         pred_filepath = output_dir / f'{complex_filepath.stem}.txt'
@@ -581,7 +583,7 @@ def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
 
 
 ####### D_WIKI #######
-evaluate_on_D_WIKI(phase='test', features_kwargs=None, model_dirname=model_dirname)
+evaluate_on_D_WIKI(phase='valid', features_kwargs=None, model_dirname=model_dirname)
 # T5 single: SARI: 44.72      D-SARI: 0.36    BLEU: 25.67     FKGL: 9.07
 # T5_2: SARI: 48.65      D-SARI: 0.38    BLEU: 13.86     FKGL: 6.58
 # T5_2 key_num original loss: SARI: 48.28      D-SARI: 0.37    BLEU: 16.41     FKGL: 7.01

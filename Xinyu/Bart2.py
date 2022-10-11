@@ -95,12 +95,12 @@ class SumSim(pl.LightningModule):
         self.simplifier = BartFineTuner.load_from_checkpoint("Xinyu/experiments/exp_BART_FineTuned_WikiLarge/checkpoint-epoch=4.ckpt")
         self.simplifier = self.simplifier.model.to(self.args.device)
         self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
-        self.simplifier = self.simplifier.to(self.args.device)
 
-        self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
-        self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
+
+        #self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
+        #self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
         #self.relu = nn.ReLU()
-        self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
+        #self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
         #self.W2 = torch.randn((int(self.args.hidden_size), 1), requires_grad=True, device = self.args.device)
         
 
@@ -156,7 +156,7 @@ class SumSim(pl.LightningModule):
             decoder_attention_mask = batch['target_mask']
         )
         
-        H1 = sum_outputs.encoder_last_hidden_state
+        #H1 = sum_outputs.encoder_last_hidden_state
 
         # generate summary
         summary_ids = self.summarizer.generate(
@@ -196,7 +196,7 @@ class SumSim(pl.LightningModule):
             labels = labels,
             decoder_attention_mask = batch['target_mask']
         )
-        H2 = sim_outputs.encoder_last_hidden_state
+        #H2 = sim_outputs.encoder_last_hidden_state
         
         ## CosSim
         # Rep1 = torch.matmul(H1, self.W)
@@ -207,15 +207,15 @@ class SumSim(pl.LightningModule):
         # sim_score = CosSim(Rep1, Rep2)
 
         ## KL loss
-        H1 = torch.transpose((torch.transpose(H1, 1,2)@self.Q), 1,2)
-        H2 = torch.transpose((torch.transpose(H2, 1,2)@self.Q), 1,2)
-        Rep1 = torch.matmul(H1, self.W)
-        Rep2 = torch.matmul(H2, self.W)
-        Rep1 = Rep1.squeeze(dim=2)
-        Rep2 = Rep2.squeeze(dim=2)
-        LogSoftMax = nn.LogSoftmax(dim=1)
-        Rep1 = LogSoftMax(Rep1)
-        Rep2 = LogSoftMax(Rep2)
+        # H1 = torch.transpose((torch.transpose(H1, 1,2)@self.Q), 1,2)
+        # H2 = torch.transpose((torch.transpose(H2, 1,2)@self.Q), 1,2)
+        # Rep1 = torch.matmul(H1, self.W)
+        # Rep2 = torch.matmul(H2, self.W)
+        # Rep1 = Rep1.squeeze(dim=2)
+        # Rep2 = Rep2.squeeze(dim=2)
+        # LogSoftMax = nn.LogSoftmax(dim=1)
+        # Rep1 = LogSoftMax(Rep1)
+        # Rep2 = LogSoftMax(Rep2)
 
         if self.args.custom_loss:
             '''
@@ -228,7 +228,7 @@ class SumSim(pl.LightningModule):
             loss = sim_outputs.loss * self.args.w1
             loss += sum_outputs.loss * self.args.w2
             ### KL ###
-            loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
+            #loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
             
             ### CosSim ###
             #loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
@@ -337,12 +337,12 @@ class SumSim(pl.LightningModule):
             {
                 "params": [p for n,p in model2.named_parameters()]
             },
-            {
-                "params": self.W
-            },
-            {
-                "params": self.Q
-            },
+            # {
+            #     "params": self.W
+            # },
+            # {
+            #     "params": self.Q
+            # },
             # {
             #     "params": self.W2
             # }
@@ -405,21 +405,21 @@ class SumSim(pl.LightningModule):
       # facebook/bart-base
       p.add_argument('-HiddenSize','--hidden_size',type=int, default = 1)
       p.add_argument('-SeqDim','--seq_dim', type=int, default = 512)
-      p.add_argument('-Weight1', '--w1', type = int, default = 20)
+      p.add_argument('-Weight1', '--w1', type = int, default = 1)
       p.add_argument('-Weight2', '--w2', type = int, default = 1)
-      p.add_argument('-Lambda', '--lambda_', type = int, default = 10)
+      p.add_argument('-Lambda', '--lambda_', type = int, default = 11)
       # BRIO: Yale-LILY/brio-cnndm-uncased
       p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
       p.add_argument('-Simplifier','--sim_model', default='facebook/bart-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
+      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
-      p.add_argument('-WeightDecay','--weight_decay', default = 3e-4)
+      p.add_argument('-WeightDecay','--weight_decay', default = 0.0001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
       p.add_argument('-NumEpoch','--num_train_epochs',default=5)
-      p.add_argument('-CosLoss','--custom_loss', default=True)
+      p.add_argument('-CosLoss','--custom_loss', default=False)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
@@ -595,7 +595,7 @@ def train(args):
 
     print("Initialize model")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = SumSim(args).to(device)
+    model = SumSim(args)
     #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
