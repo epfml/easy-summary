@@ -190,7 +190,7 @@ def evaluate_system_output(
         )
     if "D-sari" in metrics:
         # print(type(orig_sents))
-        print(len(sys_sents))
+        #print(len(sys_sents))
         #print((refs_sents[0][0]))
         metrics_scores['D-sari'] = D_SARI_file(
             orig_sents,

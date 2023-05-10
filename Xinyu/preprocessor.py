@@ -56,6 +56,7 @@ D_WIKI_MATCH = 'D_wiki_match'
 WIKI_DOC_FILTER = 'wiki_doc_filter'
 WIKI_DOC_CLEAN = 'wiki_doc_clean'
 WIKI_DOC_MATCH = 'wiki_doc_match'
+WIKI_DOC_FINAL = 'wiki_doc_final'
 
 
 WORD_EMBEDDINGS_NAME = "glove.42B.300d"

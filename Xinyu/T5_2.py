@@ -66,21 +66,19 @@ class SumSim(pl.LightningModule):
         self.summarizer_tokenizer = T5TokenizerFast.from_pretrained(self.args.sum_model)
         self.summarizer = self.summarizer.to(self.args.device)
 
-        self.simplifier = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_T5_FineTuned_WikiLarge/checkpoint-epoch=2.ckpt')
+        self.simplifier = T5FineTuner.load_from_checkpoint('experiments/exp_T5_FineTuned_WikiLarge/checkpoint-epoch=2.ckpt')
         self.simplifier = self.simplifier.model.to(self.args.device)
         self.simplifier_tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
 
         
         
         self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
-        # self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
-        
+
         self.CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
         self.relu = nn.ReLU()
-        #self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
-        #self.mse_loss = nn.MSELoss()
         
 #        self.args.learning_rate = 1e-4
+        #self.args.num_train_epochs = 5
 
 
     def is_logger(self):
@@ -134,7 +132,7 @@ class SumSim(pl.LightningModule):
         ## summarizer stage
         inputs = self.summarizer_tokenizer(
             source,
-            max_length = 256, # 1024
+            max_length = 512, # 1024
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -161,7 +159,7 @@ class SumSim(pl.LightningModule):
         summary_ids = self.summarizer.generate(
             inputs['input_ids'].to(self.args.device),
             do_sample = True,
-            num_beams = 16,
+            num_beams = 5,
             min_length = 10,
             max_length = 256, # 512
         ).to(self.args.device)
@@ -206,26 +204,15 @@ class SumSim(pl.LightningModule):
 
         Rep1 = torch.matmul(H_sim, self.W)
         Rep2 = torch.matmul(H2, self.W)
-
-        # ReLU(H*W)*W2
         Rep1 = self.relu(Rep1)
         Rep2 = self.relu(Rep2)
-        # Rep1 = torch.matmul(Rep1,self.W2)
-        # Rep2 = torch.matmul(Rep2,self.W2)
-
-        # Rep1 = Rep1.squeeze(dim=2)
-        # Rep2 = Rep2.squeeze(dim=2)
-        # LogSoftMax = nn.LogSoftmax(dim=1)
-        # Rep1 = LogSoftMax(Rep1)
-        # Rep2 = LogSoftMax(Rep2)
-        ###################
-        
-
-        
-        # CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
         # Rep1 = H_sim
         # Rep2 = H2
+
         sim_score = self.CosSim(Rep1, Rep2)
+
+        ###################
+
 
         if self.args.custom_loss:
             '''
@@ -238,9 +225,7 @@ class SumSim(pl.LightningModule):
             
             loss = sim_outputs.loss * self.args.w1
             #loss += sum_outputs.loss * self.args.w2
-            ### KL ###
-            #loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
-            
+
             ### CosSim ###
             loss += (-self.args.lambda_ * (sim_score.mean(dim=1).mean(dim=0)))
 
@@ -272,7 +257,7 @@ class SumSim(pl.LightningModule):
             # summarize the document
             inputs = self.summarizer_tokenizer(
             [text],
-            max_length = 256, #1024
+            max_length = 512, #1024
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -280,7 +265,7 @@ class SumSim(pl.LightningModule):
             # generate summary
             summary_ids = self.summarizer.generate(
                 inputs['input_ids'].to(self.args.device),
-                num_beams = 20,
+                num_beams = 15,
                 #min_length = 30,
                 max_length = 256, # 512
                 top_k = 130, top_p = 0.95
@@ -302,9 +287,9 @@ class SumSim(pl.LightningModule):
                 attention_mask=summary_attention_mask,
                 do_sample=True,
                 max_length=256,#512
-                num_beams=16,
-                top_k=120,
-                top_p=0.95,
+                num_beams=2,
+                top_k=80,
+                top_p=0.90,
                 early_stopping=True,
                 num_return_sequences=1
             ).to(self.device)
@@ -359,15 +344,6 @@ class SumSim(pl.LightningModule):
             {
                 "params": self.W
             },
-            # {
-            #     "params": self.Q
-            # },
-            # {
-            #     "params": self.W1
-            # },
-            # {
-            #     "params": self.W2
-            # }
         ]
         optimizer = AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         self.opt = optimizer
@@ -441,7 +417,7 @@ class SumSim(pl.LightningModule):
       p.add_argument('-NumEpoch','--num_train_epochs',default=7)
       p.add_argument('-CosLoss','--custom_loss', default=True)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
-      p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
+      p.add_argument('-GPUs','--n_gpu',default=1) #torch.cuda.device_count()
       p.add_argument('-nbSVS','--nb_sanity_val_steps',default = -1)
       p.add_argument('-TrainSampleSize','--train_sample_size', default=1)
       p.add_argument('-ValidSampleSize','--valid_sample_size', default=1)
@@ -484,7 +460,7 @@ class TrainDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=512, sample_size=1):
         self.sample_size = sample_size
         print("init TrainDataset ...")
-        self.source_filepath = get_data_filepath(dataset,'train','complex')
+        self.source_filepath = get_data_filepath(dataset,'train','complex_kw_num4_div0.9') #_kw_num4_div0.7
         self.target_filepath = get_data_filepath(dataset,'train','simple')
         print("source_filepath: ", self.source_filepath)
         print("Initialized dataset done.....")
@@ -543,7 +519,7 @@ class ValDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=512, sample_size=1):
         self.sample_size = sample_size
         ### WIKI-large dataset ###
-        self.source_filepath = get_data_filepath(dataset, 'valid', 'complex')
+        self.source_filepath = get_data_filepath(dataset, 'valid', 'complex_kw_num4_div0.9')#
         self.target_filepaths = get_data_filepath(dataset, 'valid', 'simple')
 
         ### turkcorpus dataset ###
@@ -624,7 +600,7 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #torch.cuda.set_device(0)
     model = SumSim(args)
-    #model = SumSim.load_from_checkpoint("Xinyu/experiments/exp_DWikiMatch_T5_kw_num3_div0.7/checkpoint-epoch=6.ckpt")
+    #model = SumSim.load_from_checkpoint("Xinyu/experiments/exp_1669794353772479/checkpoint-epoch=2.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

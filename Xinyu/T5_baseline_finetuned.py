@@ -152,7 +152,7 @@ class T5BaseLineFineTuned(pl.LightningModule):
             text = "simplify: " + sentence
             encoding = self.tokenizer(
             [text],
-            max_length = 256,
+            max_length = 512,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -165,7 +165,7 @@ class T5BaseLineFineTuned(pl.LightningModule):
                 attention_mask = attention_mask,
                 do_sample = True,
                 max_length = 256,
-                num_beams = 16,
+                num_beams = 5,
                 top_k = 120,
                 top_p = 0.95,
                 early_stopping = True,
@@ -269,12 +269,12 @@ class T5BaseLineFineTuned(pl.LightningModule):
       p.add_argument('-Summarizer','--sum_model', default='t5-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=3e-4)
+      p.add_argument('-lr','--learning_rate',type=float, default=4e-4)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.0001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=5)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=7)
       p.add_argument('-CosLoss','--custom_loss', default=False)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
@@ -454,7 +454,7 @@ def train(args):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = T5BaseLineFineTuned(args)
-    #model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1661066252541905/checkpoint-epoch=2.ckpt')
+    #model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1679476760348463/checkpoint-epoch=0.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

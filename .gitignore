@@ -8,6 +8,10 @@ __pycache__/
 *lightning_logs
 *deep-learning-project
 *QuestEval
+*muss
+*access
+*SBU
+*sub_captions
 # C extensions
 *.so
 *resources

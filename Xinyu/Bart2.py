@@ -92,7 +92,7 @@ class SumSim(pl.LightningModule):
 
 
         #self.simplifier = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
-        self.simplifier = BartFineTuner.load_from_checkpoint("Xinyu/experiments/exp_BART_FineTuned_WikiLarge/checkpoint-epoch=4.ckpt")
+        self.simplifier = BartFineTuner.load_from_checkpoint("experiments/exp_WikiLarge_BARTSingle/checkpoint-epoch=2.ckpt")
         self.simplifier = self.simplifier.model.to(self.args.device)
         self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
 
@@ -135,7 +135,7 @@ class SumSim(pl.LightningModule):
         ## summarizer stage
         inputs = self.summarizer_tokenizer(
             source,
-            max_length = 256,
+            max_length = 512,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -161,7 +161,7 @@ class SumSim(pl.LightningModule):
         # generate summary
         summary_ids = self.summarizer.generate(
             inputs['input_ids'].to(self.args.device),
-            num_beams = 16,
+            num_beams = 5,
             min_length = 10,
             max_length = 256,
             top_k=120,top_p=0.95,
@@ -226,7 +226,7 @@ class SumSim(pl.LightningModule):
             - lambda: control the weight of the complexity loss.
             '''
             loss = sim_outputs.loss * self.args.w1
-            loss += sum_outputs.loss * self.args.w2
+            #loss += sum_outputs.loss * self.args.w2
             ### KL ###
             #loss += (self.args.lambda_ * self.kl_loss(Rep1, Rep2))
             
@@ -266,7 +266,7 @@ class SumSim(pl.LightningModule):
             # summarize the document
             inputs = self.summarizer_tokenizer(
             [text],
-            max_length = 256,
+            max_length = 512,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -274,8 +274,8 @@ class SumSim(pl.LightningModule):
             # generate summary
             summary_ids = self.summarizer.generate(
                 inputs['input_ids'].to(self.args.device),
-                num_beams = 16,
-                min_length = 30,
+                num_beams = 5,
+                min_length = 10,
                 max_length = 256,
                 top_k = 120, top_p = 0.95,
             ).to(self.args.device)
@@ -292,7 +292,7 @@ class SumSim(pl.LightningModule):
                 attention_mask=summary_attention_mask,
                 do_sample=True,
                 max_length=self.args.max_seq_length,
-                num_beams=16,
+                num_beams=5,
                 top_k=130,
                 top_p=0.95,
                 early_stopping=True,
@@ -408,17 +408,17 @@ class SumSim(pl.LightningModule):
       p.add_argument('-Weight1', '--w1', type = int, default = 1)
       p.add_argument('-Weight2', '--w2', type = int, default = 1)
       p.add_argument('-Lambda', '--lambda_', type = int, default = 11)
-      # BRIO: Yale-LILY/brio-cnndm-uncased
-      p.add_argument('-Summarizer','--sum_model', default='facebook/bart-base')
+      # BRIO: Yale-LILY/brio-cnndm-uncased ainize/bart-base-cnn
+      p.add_argument('-Summarizer','--sum_model', default='ainize/bart-base-cnn')
       p.add_argument('-Simplifier','--sim_model', default='facebook/bart-base')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=1e-4)
+      p.add_argument('-lr','--learning_rate',type=float, default=5e-5)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.0001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=5)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=7)
       p.add_argument('-CosLoss','--custom_loss', default=False)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
@@ -596,7 +596,7 @@ def train(args):
     print("Initialize model")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SumSim(args)
-    #model.simplifier.load_from_checkpoint("Xinyu/experiments/exp_wikiparagh_10_epoch/checkpoint-epoch=3.ckpt")
+    #model = SumSim.load_from_checkpoint("Xinyu/experiments/exp_DWikiMatch_BART/checkpoint-epoch=4.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)

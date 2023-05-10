@@ -3,16 +3,42 @@ import torch
 from easse.sari import corpus_sari
 from transformers import T5ForConditionalGeneration,pipeline
 import torch.nn as nn
-from keybert import KeyBERT
-import torch.nn.functional as F
-from sentence_transformers import SentenceTransformer, util
+#from keybert import KeyBERT
+# import torch.nn.functional as F
+# from sentence_transformers import SentenceTransformer, util
+# import pandas as pd
+import shutil
 
-comparer = SentenceTransformer('all-MiniLM-L6-v2')
+# shutil.make_archive('sbu-3', 'zip', root_dir='sub_captions')
+import zipfile
 
-kl_loss = nn.KLDivLoss(reduction = 'batchmean', log_target = True)
+with zipfile.ZipFile('sbu-2.zip', 'r') as z:
+    z.extractall('SBU')
 
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-device = 'cpu'
+# kw_model = KeyBERT(model = 'all-mpnet-base-v2')
+# # Appendix A 4
+# source = "the phoenix dwarf is a dwarf irregular galaxy discovered in 1976 by hans-emil schuster and richard martin west and mistaken for a globular cluster . it is currently 1.44 mly away from earth . its name comes from the fact that it is part of the phoenix constellation ."
+# ref = 'the phoenix dwarf is a galaxy discovered as a mistaken globular cluster . it ’s correctly 1.14 mly away the earth '
+
+# src_kw = kw_model.extract_keywords(source, keyphrase_ngram_range=(1, 1), stop_words=None,top_n = 10, use_mmr = True,diversity = 0.5)
+# ref_kw = kw_model.extract_keywords(ref, keyphrase_ngram_range=(1, 1), stop_words=None, top_n = 10, use_mmr = True,diversity = 0.5)
+# print("Top 5 keywords of source: ", src_kw[:5])
+# print("Top 5 keywords of reference: ", ref_kw[:5])
+
+# df1 = pd.read_csv("Xinyu/experiments/exp_DWikiMatch_T5_kw_num4_div0.7/outputs/epfl_news_en.valid.complex_kw_num4_div0.txt")
+# df2 = pd.read_csv("Xinyu/resources/datasets/epfl_news_en/epfl_news_en.valid.complex")
+
+# df = [df2, df1]
+# res = pd.concat(df)
+# res.to_csv("Xinyu/resources/datasets/epfl_news_en/epfl_news_en_complex_simple.csv")
+
+# comparer = SentenceTransformer('all-MiniLM-L6-v2')
+
+# kl_loss = nn.KLDivLoss(reduction = 'batchmean', log_target = True)
+
+# from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+# device = 'cpu'
+
 # tokenizer = AutoTokenizer.from_pretrained("ml6team/keyphrase-generation-t5-small-inspec")
 
 # model = AutoModelForSeq2SeqLM.from_pretrained("ml6team/keyphrase-generation-t5-small-inspec").to(device)
@@ -29,8 +55,8 @@ device = 'cpu'
 # model = BartForConditionalGeneration.from_pretrained('facebook/bart-base').to(device)
 # tokenizer = BartTokenizerFast.from_pretrained('facebook/bart-base')
 
-model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
-tokenizer = T5Tokenizer.from_pretrained('t5-base')
+# model = T5ForConditionalGeneration.from_pretrained('t5-base').to(device)
+# tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
 # sent = """
 # Keyphrase extraction is a technique in text analysis where you extract the
@@ -49,9 +75,9 @@ tokenizer = T5Tokenizer.from_pretrained('t5-base')
 # in the text, whereas these neural approaches can capture long-term
 # semantic dependencies and context of words in a text.
 # """.replace("\n", " ")
-sent = ['summarize: The cat sits outside', 'summarize: The new movie is awesome']
-tg = ['The dog plays in the garden', 'The new movie is so great']
-kws = ['cat_0.5 sits_0.5 outside_0.5', 'movie_0.5 awesome_0.5 new_0.5']
+# sent = ['summarize: The cat sits outside', 'summarize: The new movie is awesome']
+# tg = ['The dog plays in the garden', 'The new movie is so great']
+# kws = ['cat_0.5 sits_0.5 outside_0.5', 'movie_0.5 awesome_0.5 new_0.5']
 
 #Compute embedding for both lists
 # embeddings1 = comparer.encode(sent, convert_to_tensor=True)
@@ -107,43 +133,43 @@ kws = ['cat_0.5 sits_0.5 outside_0.5', 'movie_0.5 awesome_0.5 new_0.5']
 # )
 # print(outputs.loss)
 
-max_seq = 256
+# max_seq = 256
 
-inputs = tokenizer(
-    sent,
-    max_length = max_seq,
-    truncation = True,
-    padding = 'max_length',
-    return_tensors = 'pt'
-).to(device)
+# inputs = tokenizer(
+#     sent,
+#     max_length = max_seq,
+#     truncation = True,
+#     padding = 'max_length',
+#     return_tensors = 'pt'
+# ).to(device)
 
-src_ids = inputs['input_ids'].to(device)
-src_mask = inputs['attention_mask'].to(device)
+# src_ids = inputs['input_ids'].to(device)
+# src_mask = inputs['attention_mask'].to(device)
 
-tgt = tokenizer(
-    tg,
-    max_length = max_seq,
-    truncation = True,
-    padding = 'max_length',
-    return_tensors = 'pt'
-).to(device)
+# tgt = tokenizer(
+#     tg,
+#     max_length = max_seq,
+#     truncation = True,
+#     padding = 'max_length',
+#     return_tensors = 'pt'
+# ).to(device)
 
-labels = tgt['input_ids'].to(device)
-labels[labels[:,:] == tokenizer.pad_token_id] = -100
-decoder_attention_mask = tgt['attention_mask'].to(device)
+# labels = tgt['input_ids'].to(device)
+# labels[labels[:,:] == tokenizer.pad_token_id] = -100
+# decoder_attention_mask = tgt['attention_mask'].to(device)
 
-kw_encoding = tokenizer(
-    kws,
-    max_length = max_seq,
-    truncation = True,
-    padding = 'max_length',
-    return_tensors = 'pt'
-).to(device)
+# kw_encoding = tokenizer(
+#     kws,
+#     max_length = max_seq,
+#     truncation = True,
+#     padding = 'max_length',
+#     return_tensors = 'pt'
+# ).to(device)
 
-kw_ids = kw_encoding['input_ids'].to(device)
-print("kw_ids: ", kw_ids.shape)
-print("kw_ids[0]: ", kw_ids[0])
-print('decode: ', tokenizer.decode(kw_ids[0], skip_special_tokens=True))
+# kw_ids = kw_encoding['input_ids'].to(device)
+# print("kw_ids: ", kw_ids.shape)
+# print("kw_ids[0]: ", kw_ids[0])
+# print('decode: ', tokenizer.decode(kw_ids[0], skip_special_tokens=True))
 # for src_id in src_ids:
 #     # add tokens in front of the src_id
 #     tokens = torch.tensor([18356, 10]).to(device)
@@ -152,79 +178,79 @@ print('decode: ', tokenizer.decode(kw_ids[0], skip_special_tokens=True))
 
 # print(src_ids)
 
-sum_outputs = model(
-    input_ids = src_ids,
-    attention_mask = src_mask,
-    labels = labels,
-    decoder_attention_mask = decoder_attention_mask,
-    output_hidden_states = True
-)
+# sum_outputs = model(
+#     input_ids = src_ids,
+#     attention_mask = src_mask,
+#     labels = labels,
+#     decoder_attention_mask = decoder_attention_mask,
+#     output_hidden_states = True
+# )
 
 # (1, 256, 768) --> (1,512, 768)
-H1 = sum_outputs.encoder_last_hidden_state
-print(sum_outputs.encoder_last_hidden_state.shape, H1.requires_grad)
+# H1 = sum_outputs.encoder_last_hidden_state
+# print(sum_outputs.encoder_last_hidden_state.shape, H1.requires_grad)
 #print(sum_outputs.decoder_hidden_states[1].shape)
 
-summary_ids = model.generate(
-    src_ids,
-    num_beams=10, min_length = 3,
-    max_length=256,
-).to(device)
+# summary_ids = model.generate(
+#     src_ids,
+#     num_beams=10, min_length = 3,
+#     max_length=256,
+# ).to(device)
 
-print('decode: ', tokenizer.batch_decode(summary_ids, skip_special_tokens=True))
+# print('decode: ', tokenizer.batch_decode(summary_ids, skip_special_tokens=True))
  
 # (1,98) --> (1,48)
 # print(summary_ids)
 # print(summary_ids.shape)
 
-padded_summary_ids = torch.zeros((summary_ids.shape[0], max_seq), dtype = torch.long).fill_(tokenizer.pad_token_id).to(device)
-for i, summary_id in enumerate(summary_ids):
-    print(summary_id.shape)
-    padded_summary_ids[i, :summary_id.shape[0]] = summary_id
+# padded_summary_ids = torch.zeros((summary_ids.shape[0], max_seq), dtype = torch.long).fill_(tokenizer.pad_token_id).to(device)
+# for i, summary_id in enumerate(summary_ids):
+#     print(summary_id.shape)
+#     padded_summary_ids[i, :summary_id.shape[0]] = summary_id
     
-for i, pad_summary_id in enumerate(padded_summary_ids):
-    added = kw_ids[i]
-    # get non-zero elements
-    added = added[added != 0]
-    #print(added)
-    new_ = torch.cat((added,pad_summary_id), dim=0)[:max_seq]
-    # add "simplify: " token
-    padded_summary_ids[i] = torch.cat((torch.tensor([18356, 10]).to(device), new_), dim=0)[:max_seq]
+# for i, pad_summary_id in enumerate(padded_summary_ids):
+#     added = kw_ids[i]
+#     # get non-zero elements
+#     added = added[added != 0]
+#     #print(added)
+#     new_ = torch.cat((added,pad_summary_id), dim=0)[:max_seq]
+#     # add "simplify: " token
+#     padded_summary_ids[i] = torch.cat((torch.tensor([18356, 10]).to(device), new_), dim=0)[:max_seq]
    
 
 
-print("padding summary_ids: ",padded_summary_ids.shape)
-attention_mask = torch.ones(padded_summary_ids.shape).to(device)
-print(tokenizer.pad_token_id)
-attention_mask[padded_summary_ids[:,:]==tokenizer.pad_token_id]=0
-print(tokenizer.batch_decode(padded_summary_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True))
+# print("padding summary_ids: ",padded_summary_ids.shape)
+# attention_mask = torch.ones(padded_summary_ids.shape).to(device)
+# print(tokenizer.pad_token_id)
+# attention_mask[padded_summary_ids[:,:]==tokenizer.pad_token_id]=0
+# print(tokenizer.batch_decode(padded_summary_ids, skip_special_tokens=True, clean_up_tokenization_spaces=True))
 
 
-tmpids = model.generate(
-    padded_summary_ids,
-    num_beams=10, min_length = 3,
-    max_length=max_seq,
-    do_sample=True,
-                top_k=130,
-                top_p=0.95,
-                early_stopping=True,
-                num_return_sequences=1
-).to(device)
-print(tmpids.shape)
+# tmpids = model.generate(
+#     padded_summary_ids,
+#     num_beams=10, min_length = 3,
+#     max_length=max_seq,
+#     do_sample=True,
+#                 top_k=130,
+#                 top_p=0.95,
+#                 early_stopping=True,
+#                 num_return_sequences=1
+# ).to(device)
+# print(tmpids.shape)
 # T5 model
 #ans = tokenizer.decode(tmpids[0], skip_special_tokens = True, clean_up_tokenization_spaces = True)
 #print(ans)
 
-outputs = model(
-    input_ids = padded_summary_ids,
-    attention_mask = attention_mask,
-    labels = labels,
-    decoder_attention_mask = decoder_attention_mask,
-    output_hidden_states = True
-)
-# (1,512,768)
-H2 = outputs.encoder_last_hidden_state
-print(outputs.encoder_last_hidden_state.shape)
+# outputs = model(
+#     input_ids = padded_summary_ids,
+#     attention_mask = attention_mask,
+#     labels = labels,
+#     decoder_attention_mask = decoder_attention_mask,
+#     output_hidden_states = True
+# )
+# # (1,512,768)
+# H2 = outputs.encoder_last_hidden_state
+# print(outputs.encoder_last_hidden_state.shape)
 #print(outputs.decoder_hidden_states[1].shape)
 
 # print(util.cos_sim(H2.mean(dim = 1),H1.mean(dim=1)))

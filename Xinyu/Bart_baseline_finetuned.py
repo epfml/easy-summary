@@ -36,7 +36,7 @@ from transformers import (
     T5ForConditionalGeneration,
     T5TokenizerFast,
     BertTokenizer, BertForPreTraining,
-    BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel,
+    BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel, PreTrainedTokenizerFast,
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
 from Ts_BART import BartFineTuner
@@ -64,7 +64,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
         #self.model = self.model.model.to(self.args.device)
         self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
         self.model = self.model.to(self.args.device)
-        self.tokenizer = BartTokenizer.from_pretrained(self.args.sum_model)
+        self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
         
 #        self.args.learning_rate = 1e-4
 
@@ -145,7 +145,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
             text = sentence
             encoding = self.tokenizer(
             [text],
-            max_length = 256,
+            max_length = 512,
             truncation = True,
             padding = 'max_length',
             return_tensors = 'pt'
@@ -158,7 +158,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
                 attention_mask = attention_mask,
                 do_sample = True,
                 max_length = 256,
-                num_beams = 16,
+                num_beams = 5,
                 top_k = 120,
                 top_p = 0.95,
                 early_stopping = True,
@@ -258,8 +258,8 @@ class BartBaseLineFineTuned(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
-      # facebook/bart-base Yale-LILY/brio-cnndm-uncased
-      p.add_argument('-Summarizer','--sum_model', default='Yale-LILY/brio-cnndm-uncased')
+      # facebook/bart-base Yale-LILY/brio-cnndm-uncased ainize/bart-base-cnn
+      p.add_argument('-Summarizer','--sum_model', default='ainize/bart-base-cnn')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
       p.add_argument('-lr','--learning_rate',type=float, default=5e-5)
@@ -267,7 +267,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.0001)
       p.add_argument('-WarmupSteps','--warmup_steps',default=5)
-      p.add_argument('-NumEpoch','--num_train_epochs',default=10)
+      p.add_argument('-NumEpoch','--num_train_epochs',default=7)
       p.add_argument('-CosLoss','--custom_loss', default=False)
       p.add_argument('-GradAccuSteps','--gradient_accumulation_steps', default=1)
       p.add_argument('-GPUs','--n_gpu',default=torch.cuda.device_count())
@@ -446,7 +446,7 @@ def train(args):
     print("Initialize model")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = BartBaseLineFineTuned(args)
-    #model = BartBaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1660459472819581/checkpoint-epoch=1.ckpt')
+    #model = BartBaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_DWikiMatch_BARTSingle(bart_base_cnn)/checkpoint-epoch=2.ckpt')
     
     model.args.dataset = args.dataset
     print(model.args.dataset)

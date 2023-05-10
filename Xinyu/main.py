@@ -11,7 +11,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 
-from preprocessor import D_WIKI,D_WIKI_SMALL,D_WIKI_CLEAN, D_WIKI_MATCH, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN, WIKI_DOC_MATCH
+from preprocessor import D_WIKI,D_WIKI_SMALL,D_WIKI_CLEAN, D_WIKI_MATCH, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN, WIKI_DOC_MATCH, WIKI_DOC_FINAL
 import time
 import json
 
@@ -147,23 +147,24 @@ def run_training(args, dataset):
 
 
 
-##STOP- MLO97 (tmux 0): T5_2 D_wiki_match original loss 0.52277 -> 0.52057
-##STOP- MLO100 (tmux 0): T5_2 D_wiki_match 1Sim+0.1Sum 0.57238
-##STOP- MLO95 (tmux 1): T5_2 Wiki_Doc_match kw_num4_div0.7
-##STOP- MLO100 (tmux 0): T5_2 D_wiki_match 1Sim+0.1Sum 0.57238
-##STOP- MLO96 (tmux 0): T5_2 D_wiki_match 1Sim+0.01Sum 0.58517
-## MLO94 (tmux 1): T5_2 D_wiki_match 1Sim-2CosSim(ReLU)(H_sim*W, H2*W) 0.52839 -> 0.52745 -> 0.52084 -> 0.52016
-##STOP- MLO100 (tmux 0): T5_2 D_wiki_match 1Sim+0.001Sum 0.56481
-##STOP- MLO99 (tmux 0): T5_2 D_wiki_match (1st stage freeze) original loss 0.53515 -> 0.52706 -> 0.52037 -> 0.51967 -> 0.51731
-## MLO96 (tmux 1): T5_2 D_Wiki_match 1Sim-0.001CosSim(ReLU)(H_sim*W, H2*W) 0.53350 -> 0.52613
-##STOP- MLO98 (tmux 0): continue T5_2 D_wiki_match original loss 0.51914 -> 0.51888 -> 0.51751
-##STOP- MLO95 (tmux 0): continue T5_2 D_wiki_match kw_num3_div0.7 0.51502
-## MLO94 (tmux 0): T5_2 wiki_doc_match 1Sim-0.01CosSim(ReLU)(H_sim*W, H2*W) 0.50801
-## MLO95 (tmux 0): T5_2 wiki_doc_match 1Sim-0.1CosSim(ReLU)(H_sim*W, H2*W) 0.51155 -> 0.51122
-## MLO98 (tmux 0): T5_2 wiki_doc_match 1Sim-0.5CosSim(ReLU)(H_sim*W, H2*W) 0.53176 -> 0.53067
-    ## MLO96 (tmux 1): T5_2 D_wiki-match 1Sim-1CosSim(ReLU)(H_sim, H2) 0.61288
-dataset = WIKI_DOC_MATCH
 
+
+
+
+
+
+
+
+
+
+
+
+
+   ## MLO98 (tmux 0): BART Single pretrained summarization model (ainize/bart-base-cnn) on D-Wiki
+## MLO98 (tmux 0): BART joint (bart-base-cnn+simplifier) D-wiki-match
+## MLO98 (tmux 1): BART-base-cnn d-wiki-match
+## MLO96 (tmux 1): T5 joint wiki-doc-final kw_num4_div0.9 0.001CosSim(ReLU_W)
+dataset = WIKI_DOC_FINAL
 args = parse_arguments()
 run_training(args, dataset)
 
