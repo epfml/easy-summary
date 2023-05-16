@@ -27,12 +27,6 @@ from T5_2 import SumSim
 from T5_baseline_finetuned import T5BaseLineFineTuned
 from Bart_baseline_finetuned import BartBaseLineFineTuned
 
-#from keybert import KeyBERT
-from transformers.pipelines import pipeline
-
-# hf_model = pipeline("feature-extraction", model="distilbert-base-cased")
-
-# kw_model = KeyBERT(model = 'all-mpnet-base-v2')
 
 @contextmanager
 def log_stdout(filepath, mute_stdout=False):
