@@ -1,5 +1,6 @@
 '''
 Preprocess the original dataset and get special-tokened sentences
+From https://github.com/KimChengSHEANG/TS_T5/blob/main/source/preprocessor.py
 '''
 
 # -- fix path --
@@ -29,38 +30,15 @@ from sacremoses import MosesDetokenizer, MosesTokenizer
 
 
 REPO_DIR = Path(__file__).resolve().parent
-RESOURCES_DIR = REPO_DIR / 'resources'
+# RESOURCES_DIR = REPO_DIR / 'data'
 EXP_DIR = REPO_DIR / 'experiments'
-DATASETS_DIR = RESOURCES_DIR / 'datasets'
-PROCESSED_DATA_DIR = RESOURCES_DIR / "processed_data"
-DUMPS_DIR = RESOURCES_DIR / "DUMPS"
+DATASETS_DIR = REPO_DIR / 'data'
+
 OUTPUT_DIR = REPO_DIR / 'output'
 
-ASSET_DATASET = "asset"
-WIKILARGE_DATASET = 'wikilarge'
-WIKI_PARA_DATASET = 'wiki_paragh'
-TURKCORPUS_DATASET = "turkcorpus"
-NEWSELA_DATASET = "newsela"
-EPFL_NEWS = 'epfl_news'
-WIKILARGE_FILTER_DATASET = 'wikilargeF'
-WIKI_PARAGH_FILTER_DATASET = 'wiki_paraghF'
-EPFL_NEWS_EN = 'epfl_news_en'
+
 WIKI_DOC = 'wiki_doc'
-WIKI_DOC_Small = 'wiki_doc_small'
-WIKI_DOC_MID = 'wiki_doc_mid'
-WIKI_PARAGH_SMALL = 'wiki_paragh_small'
 D_WIKI = 'D_wiki'
-D_WIKI_SMALL = 'D_wiki_small'
-D_WIKI_CLEAN = 'D_wiki_clean'
-D_WIKI_MATCH = 'D_wiki_match'
-WIKI_DOC_FILTER = 'wiki_doc_filter'
-WIKI_DOC_CLEAN = 'wiki_doc_clean'
-WIKI_DOC_MATCH = 'wiki_doc_match'
-WIKI_DOC_FINAL = 'wiki_doc_final'
-
-
-WORD_EMBEDDINGS_NAME = "glove.42B.300d"
-WORD_FREQUENCY_FILEPATH = RESOURCES_DIR /'enwiki-words-frequency.txt'
 
 
 LANGUAGES = ['complex', 'simple']
