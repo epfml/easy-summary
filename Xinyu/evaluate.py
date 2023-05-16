@@ -76,8 +76,8 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
-model_dirname = 'exp_WikiDocFinal_T5_0.01CosSim(ReLU_W)'
-checkpoint_path = 'checkpoint-epoch=6.ckpt'
+model_dirname = 'exp_WikiDocFinal_T5_kw_num4_div0.9_0.001CosSim(ReLU_W)'
+checkpoint_path = 'checkpoint-epoch=5.ckpt'
 
 #### Single model ####
 # load the model
@@ -325,11 +325,11 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
     output_dir.mkdir(parents = True, exist_ok = True)
     #features_hash = generate_hash(features_kwargs)
     output_score_filepath = output_dir / f'score_{dataset}_{phase}.log.txt'
-    complex_filepath =get_data_filepath(dataset, phase, 'complex')# _kw_num3_div0.9'
+    complex_filepath =get_data_filepath(dataset, phase, 'complex_kw_num4_div0.9')# _kw_num3_div0.9'
     
     if not output_score_filepath.exists() or count_line(output_score_filepath)==0:
         start_time = time.time()
-        complex_filepath =get_data_filepath(dataset, phase, 'complex')
+        complex_filepath =get_data_filepath(dataset, phase, 'complex_kw_num4_div0.9')
         
         #complex_filepath = get_data_filepath(dataset, phase, 'complex_summary_'+str(ratio))
         pred_filepath = output_dir / f'{complex_filepath.stem}.txt'

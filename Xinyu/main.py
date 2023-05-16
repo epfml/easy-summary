@@ -162,8 +162,7 @@ def run_training(args, dataset):
 
    ## MLO98 (tmux 0): BART Single pretrained summarization model (ainize/bart-base-cnn) on D-Wiki
 ## MLO98 (tmux 0): BART joint (bart-base-cnn+simplifier) D-wiki-match
-## MLO98 (tmux 1): BART-base-cnn d-wiki-match
-## MLO96 (tmux 1): T5 joint wiki-doc-final kw_num4_div0.9 0.001CosSim(ReLU_W)
+
 dataset = WIKI_DOC_FINAL
 args = parse_arguments()
 run_training(args, dataset)
