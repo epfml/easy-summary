@@ -502,7 +502,4 @@ if __name__ == '__main__':
     }
 
     preprocessor = load_preprocessor()
-    ### processed dataset
-    dataset = EPFL_NEWS_EN
-    print(preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex'))
     # preprocessor.preprocess_dataset(WIKI_DATASET)
