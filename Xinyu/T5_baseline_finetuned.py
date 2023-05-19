@@ -22,7 +22,7 @@ import os
 import logging
 import random
 import nltk
-from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
+from preprocessor import  get_data_filepath
 from summarizer import Summarizer
 # from keybert import KeyBERT
 nltk.download('punkt')
@@ -41,7 +41,7 @@ from transformers import (
     get_linear_schedule_with_warmup, AutoConfig, AutoModel,
     get_cosine_schedule_with_warmup
 )
-from Ts_T5 import T5FineTuner
+
 #kw_model = KeyBERT()
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
@@ -63,8 +63,7 @@ class T5BaseLineFineTuned(pl.LightningModule):
         self.save_hyperparameters()
         
         # Load pre-trained model and tokenizer
-        # self.model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_T5_FineTuned_WikiLarge/checkpoint-epoch=2.ckpt')
-        # self.model =  self.model.model.to(self.args.device)
+
         self.model = T5ForConditionalGeneration.from_pretrained(self.args.sim_model)
         self.model = self.model.to(self.device)
         self.tokenizer = T5TokenizerFast.from_pretrained(self.args.sim_model)
@@ -323,9 +322,6 @@ class TrainDataset(Dataset):
         self.source_filepath = get_data_filepath(dataset,'train','complex')
         self.target_filepath = get_data_filepath(dataset,'train','simple')
         print("Initialized dataset done.....")
-        # preprocessor = load_preprocessor()
-        # self.source_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex')
-        # self.target_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'simple')
 
         self.max_len = max_len
         self.tokenizer = tokenizer
@@ -377,15 +373,6 @@ class ValDataset(Dataset):
         self.source_filepath = get_data_filepath(dataset, 'valid', 'complex')
         self.target_filepaths = get_data_filepath(dataset, 'valid', 'simple')
 
-        ### turkcorpus dataset ###
-        # self.source_filepath = get_data_filepath(TURKCORPUS_DATASET, 'valid', 'complex')
-        # self.target_filepaths = [get_data_filepath(TURKCORPUS_DATASET, 'valid', 'simple.turk',i)for i in range(8)]
-        # if dataset == NEWSELA_DATASET:
-        #     self.target_filepaths = [get_data_filepath(dataset, 'valid', 'simple')]
-
-        # else:  # TURKCORPUS_DATASET as default
-        #     self.target_filepaths = [get_data_filepath(TURKCORPUS_DATASET, 'valid', 'simple.turk', i) for i in range(8)]
-
         self.max_len = max_len
         self.tokenizer = tokenizer
 
@@ -407,16 +394,6 @@ class ValDataset(Dataset):
         for target in yield_lines(self.target_filepaths):
             self.targets.append(target)
 
-        ### turkcorpus dataset ###
-        # self.targets = [ [] for _ in range(count_line(self.target_filepaths[0]))]
-        # for file_path in self.target_filepaths:
-        #     for i, target in enumerate(yield_lines(file_path)):
-        #         self.targets[i].append(target)
-
-        # self.targets = [[] for _ in range(count_line(self.target_filepaths[0]))]
-        # for filepath in self.target_filepaths:
-        #     for idx, line in enumerate(yield_lines(filepath)):
-        #         self.targets[idx].append(line)
 
 
 def train(args):
@@ -449,15 +426,13 @@ def train(args):
         #progress_bar_refresh_rate=1,
 
     )
-    #model = T5FineTuner(args)
-    #torch.multiprocessing.set_start_method('spawn')
-    
+
+   
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = T5BaseLineFineTuned(args)
-    #model = T5BaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_1679476760348463/checkpoint-epoch=0.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
-    #model = T5FineTuner(**train_args)
+
     print(args.dataset)
     trainer = pl.Trainer(**train_params)
     # trainer = pl.Trainer.from_argparse_args(

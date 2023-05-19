@@ -20,7 +20,7 @@ import os
 import logging
 import random
 import nltk
-from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
+from preprocessor import  get_data_filepath
 from summarizer import Summarizer
 
 nltk.download('punkt')
@@ -95,14 +95,6 @@ class SumSim(pl.LightningModule):
         self.simplifier = BartFineTuner.load_from_checkpoint("experiments/exp_WikiLarge_BARTSingle/checkpoint-epoch=2.ckpt")
         self.simplifier = self.simplifier.model.to(self.args.device)
         self.simplifier_tokenizer = BartTokenizerFast.from_pretrained(self.args.sim_model)
-
-
-        #self.W = torch.randn((768, int(self.args.hidden_size)), requires_grad=True, device = self.args.device)
-        #self.Q = torch.randn((256, self.args.seq_dim), requires_grad=True, device = self.args.device)
-        #self.relu = nn.ReLU()
-        #self.kl_loss = nn.KLDivLoss(reduction="batchmean", log_target=True)
-        #self.W2 = torch.randn((int(self.args.hidden_size), 1), requires_grad=True, device = self.args.device)
-        
 
 
     def is_logger(self):

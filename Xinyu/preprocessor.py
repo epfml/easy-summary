@@ -30,12 +30,12 @@ from sacremoses import MosesDetokenizer, MosesTokenizer
 
 
 REPO_DIR = Path(__file__).resolve().parent
-# RESOURCES_DIR = REPO_DIR / 'data'
+RESOURCES_DIR = REPO_DIR / 'resources'
 EXP_DIR = REPO_DIR / 'experiments'
 DATASETS_DIR = REPO_DIR / 'data'
 
 OUTPUT_DIR = REPO_DIR / 'output'
-
+DUMPS_DIR = RESOURCES_DIR / "DUMPS"
 
 WIKI_DOC = 'wiki_doc'
 D_WIKI = 'D_wiki'

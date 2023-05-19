@@ -9,14 +9,14 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 # -- end fix path --
 
 from easse.cli import evaluate_system_output
-from Ts_T5 import T5FineTuner
+#from Ts_T5 import T5FineTuner
 #from easse.report import get_all_scores
 from contextlib import contextmanager
 import json
 from preprocessor import Preprocessor
 import torch
 from transformers import T5ForConditionalGeneration, T5TokenizerFast
-from preprocessor import get_data_filepath, EXP_DIR, TURKCORPUS_DATASET, REPO_DIR, WIKI_DOC, D_WIKI,WIKI_DOC_CLEAN, D_WIKI_CLEAN,D_WIKI_MATCH, EPFL_NEWS_EN, WIKI_DOC_MATCH, WIKI_DOC_FINAL
+from preprocessor import get_data_filepath, EXP_DIR,  REPO_DIR, WIKI_DOC, D_WIKI
 from preprocessor import write_lines, yield_lines, count_line, read_lines, generate_hash
 from easse.sari import corpus_sari
 import time
@@ -70,6 +70,7 @@ max_len = 256
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # specify the model_name and checkpoint_name
+
 model_dirname = 'exp_WikiDocFinal_T5_kw_num4_div0.9_0.001CosSim(ReLU_W)'
 checkpoint_path = 'checkpoint-epoch=5.ckpt'
 
@@ -110,7 +111,7 @@ def generate_single(sentence, preprocessor = None):
         do_sample=True,
         max_length=256,
         num_beams=2,
-        top_k=50,
+        top_k=70,
         top_p=0.95,
         early_stopping=True,
         num_return_sequences=1,
@@ -156,9 +157,9 @@ def generate(sentence, preprocessor=None):
         attention_mask = summary_atten_mask,
         do_sample = True,
         max_length = 256,
-        num_beams = 3, #16
+        num_beams = 5, #16
         top_k = 80,  #120
-        top_p = 0.90, #0.95
+        top_p = 0.95, #0.95
         early_stopping = True,
         num_return_sequences = 1,
     )
@@ -212,65 +213,65 @@ def evaluate(orig_filepath, sys_filepath, ref_filepaths):
 
     return corpus_sari(orig_sents, read_lines(sys_filepath), refs_sents)
 
-def evaluate_on(dataset, features_kwargs, phase, model_dirname=None, checkpoint_path=None):
+# def evaluate_on(dataset, features_kwargs, phase, model_dirname=None, checkpoint_path=None):
 
-    global model, tokenizer, device, model_dir, _model_dirname, max_len
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = EXP_DIR / model_dirname / checkpoint_path
-    Model = T5FineTuner.load_from_checkpoint(model_path).to(device)
-    model = Model.model
-    tokenizer = Model.tokenizer
-    model_dir = EXP_DIR / model_dirname
+#     global model, tokenizer, device, model_dir, _model_dirname, max_len
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#     model_path = EXP_DIR / model_dirname / checkpoint_path
+#     Model = T5FineTuner.load_from_checkpoint(model_path).to(device)
+#     model = Model.model
+#     tokenizer = Model.tokenizer
+#     model_dir = EXP_DIR / model_dirname
 
-    # load_model(model_dirname)
-    preprocessor = Preprocessor(features_kwargs)
-    output_dir = model_dir / "outputs"
-    # output_dir = REPO_DIR / f"outputs/{_model_dirname}"
-    output_dir.mkdir(parents=True, exist_ok=True)
-    print("Output dir: ", output_dir)
-    features_hash = generate_hash(features_kwargs)
-    output_score_filepath = output_dir / f"score_{features_hash}_{dataset}_{phase}_log.txt"
-    if not output_score_filepath.exists() or count_line(output_score_filepath) == 0:
-        # log_params(output_dir / f"{features_hash}_features_kwargs.json", features_kwargs)
-        start_time = time.time()
-        complex_filepath = get_data_filepath(dataset, phase, 'complex')
-        pred_filepath = output_dir / f'{features_hash}_{complex_filepath.stem}.txt'
-        # ref_filepaths = [get_data_filepath(dataset, phase, 'simple.turk', i) for i in range(8)]
-        ref_filepath = get_data_filepath(dataset, phase, 'simple')
-        print(pred_filepath)
-        if pred_filepath.exists() and count_line(pred_filepath) == count_line(complex_filepath):
-            print("File is already processed.")
-        else:
-            simplify_file(complex_filepath, pred_filepath, preprocessor)
+#     # load_model(model_dirname)
+#     preprocessor = Preprocessor(features_kwargs)
+#     output_dir = model_dir / "outputs"
+#     # output_dir = REPO_DIR / f"outputs/{_model_dirname}"
+#     output_dir.mkdir(parents=True, exist_ok=True)
+#     print("Output dir: ", output_dir)
+#     features_hash = generate_hash(features_kwargs)
+#     output_score_filepath = output_dir / f"score_{features_hash}_{dataset}_{phase}_log.txt"
+#     if not output_score_filepath.exists() or count_line(output_score_filepath) == 0:
+#         # log_params(output_dir / f"{features_hash}_features_kwargs.json", features_kwargs)
+#         start_time = time.time()
+#         complex_filepath = get_data_filepath(dataset, phase, 'complex')
+#         pred_filepath = output_dir / f'{features_hash}_{complex_filepath.stem}.txt'
+#         # ref_filepaths = [get_data_filepath(dataset, phase, 'simple.turk', i) for i in range(8)]
+#         ref_filepath = get_data_filepath(dataset, phase, 'simple')
+#         print(pred_filepath)
+#         if pred_filepath.exists() and count_line(pred_filepath) == count_line(complex_filepath):
+#             print("File is already processed.")
+#         else:
+#             simplify_file(complex_filepath, pred_filepath, preprocessor)
 
-        # print("Evaluate: ", pred_filepath)
-        with log_stdout(output_score_filepath):
-            # print("features_kwargs: ", features_kwargs)
+#         # print("Evaluate: ", pred_filepath)
+#         with log_stdout(output_score_filepath):
+#             # print("features_kwargs: ", features_kwargs)
 
-            # refs = [[line] for line in yield_lines(ref_filepath)]
-            # score = corpus_sari(read_lines(complex_filepath), read_lines(pred_filepath), refs)
-            # print(len(read_lines(complex_filepath)), len(read_lines(pred_filepath)) )
-            # print([len(s) for s in refs])
+#             # refs = [[line] for line in yield_lines(ref_filepath)]
+#             # score = corpus_sari(read_lines(complex_filepath), read_lines(pred_filepath), refs)
+#             # print(len(read_lines(complex_filepath)), len(read_lines(pred_filepath)) )
+#             # print([len(s) for s in refs])
 
-            # scores = get_all_scores(read_lines(complex_filepath), read_lines(pred_filepath), refs)
-            score = evaluate(complex_filepath, pred_filepath, [ref_filepath])
-            # scores = evaluate_all_metrics(complex_filepath, pred_filepath, ref_filepaths)
-            if "WordRatioFeature" in features_kwargs:
-                print("W:", features_kwargs["WordRatioFeature"]["target_ratio"], "\t", end="")
-            if "CharRatioFeature" in features_kwargs:
-                print("C:", features_kwargs["CharRatioFeature"]["target_ratio"], "\t", end="")
-            if "LevenshteinRatioFeature" in features_kwargs:
-                print("L:", features_kwargs["LevenshteinRatioFeature"]["target_ratio"], "\t", end="")
-            if "WordRankRatioFeature" in features_kwargs:
-                print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
-            if "DependencyTreeDepthRatioFeature" in features_kwargs:
-                print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
-            print("{:.2f} \t ".format(score))
+#             # scores = get_all_scores(read_lines(complex_filepath), read_lines(pred_filepath), refs)
+#             score = evaluate(complex_filepath, pred_filepath, [ref_filepath])
+#             # scores = evaluate_all_metrics(complex_filepath, pred_filepath, ref_filepaths)
+#             if "WordRatioFeature" in features_kwargs:
+#                 print("W:", features_kwargs["WordRatioFeature"]["target_ratio"], "\t", end="")
+#             if "CharRatioFeature" in features_kwargs:
+#                 print("C:", features_kwargs["CharRatioFeature"]["target_ratio"], "\t", end="")
+#             if "LevenshteinRatioFeature" in features_kwargs:
+#                 print("L:", features_kwargs["LevenshteinRatioFeature"]["target_ratio"], "\t", end="")
+#             if "WordRankRatioFeature" in features_kwargs:
+#                 print("WR:", features_kwargs["WordRankRatioFeature"]["target_ratio"], "\t", end="")
+#             if "DependencyTreeDepthRatioFeature" in features_kwargs:
+#                 print("DTD:", features_kwargs["DependencyTreeDepthRatioFeature"]["target_ratio"], "\t", end="")
+#             print("{:.2f} \t ".format(score))
 
-            print("Execution time: --- %s seconds ---" % (time.time() - start_time))
-    else:
-        print("Already exist: ", output_score_filepath)
-        print("".join(read_lines(output_score_filepath)))
+#             print("Execution time: --- %s seconds ---" % (time.time() - start_time))
+#     else:
+#         print("Already exist: ", output_score_filepath)
+#         print("".join(read_lines(output_score_filepath)))
 
 def back_translation(text):
     X = translator.translate(text, dest = 'de')
@@ -312,7 +313,7 @@ def post_process(filepath):
 
 
 def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
-    dataset = WIKI_DOC_FINAL
+    dataset = WIKI_DOC
     model_dir = EXP_DIR / model_dirname
     output_dir = model_dir / 'outputs'
 
@@ -353,7 +354,7 @@ def evaluate_on_WIKIDOC(phase, features_kwargs=None,  model_dirname = None):
         print("".join(read_lines(output_score_filepath)))
 
 def evaluate_on_D_WIKI(phase, features_kwargs=None,  model_dirname = None):
-    dataset = D_WIKI_MATCH
+    dataset = D_WIKI
 
     model_dir = EXP_DIR / model_dirname
     output_dir = model_dir / 'outputs'

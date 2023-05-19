@@ -1,6 +1,3 @@
-'''
-sum_sim model
-'''
 
 from functools import lru_cache
 from gc import callbacks
@@ -20,7 +17,7 @@ import os
 import logging
 import random
 import nltk
-from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
+from preprocessor import  get_data_filepath
 from summarizer import Summarizer
 
 nltk.download('punkt')
@@ -102,13 +99,9 @@ class BartFineTuner(pl.LightningModule):
         if self.args.custom_loss:
             '''
             Custom Loss:
-            Loss = oiginal_loss + lambda**2 * complexity_score
-
-            - ratio: control the ratio of sentences we want to compute complexity for training.
-            - lambda: control the weight of the complexity loss.
+            
             '''
             loss = outputs.loss
-            #loss += sum_outputs.loss
 
 
 
@@ -461,7 +454,3 @@ def train(args):
 
     print("training finished")
 
-    # print("Saving model")
-    # model.model.save_pretrained(args.output_dir)
-
-    # print("Saved model")

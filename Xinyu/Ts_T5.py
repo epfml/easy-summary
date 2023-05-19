@@ -18,7 +18,7 @@ import os
 import logging
 import random
 import nltk
-from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
+from preprocessor import  get_data_filepath
 
 nltk.download('punkt')
 
@@ -131,35 +131,9 @@ class T5FineTuner(pl.LightningModule):
         if self.args.custom_loss:
             '''
             Custom Loss:
-            Loss = oiginal_loss + lambda**2 * complexity_score
-
-            - ratio: control the ratio of sentences we want to compute complexity for training.
-            - lambda: control the weight of the complexity loss.
             '''
             loss = outputs.loss
-            complex_score = 0
-            ratio = 0.2
-
-            ### Add randomness to the loss
-            if torch.rand(1) < ratio:
-                pred = self.get_train_output(outputs)
-                ### Mean of the complexity score of the generated sentence
-                # complex_score = get_complexity_score(pred, operation_type = 'mean')
-
-                ### Max of the complexity score of the generated sentence
-                complex_score = get_complexity_score(pred, operation_type = 'mean')
-                complex_score = math.exp(complex_score)
             
-            #print(complex_score)
-             
-            ### 
-            lambda_1 = 60
-            lambda_2 = 0
-            ### loss1: square of the complexity score
-            #loss = lambda_1 * complex_score ** 2 + loss
-            
-            ### loss2: exponential of the complexity score
-            loss = lambda_1 * complex_score + loss
 
             
             # self.manual_backward(loss)
@@ -435,19 +409,12 @@ class ValDataset(Dataset):
         for source in yield_lines(self.source_filepath):
             self.inputs.append(source)
         
-        # for target in yield_lines(self.target_filepaths):
-        #     self.targets.append(target)
 
-        ### turkcorpus dataset ###
         self.targets = [ [] for _ in range(count_line(self.target_filepaths[0]))]
         for file_path in self.target_filepaths:
             for i, target in enumerate(yield_lines(file_path)):
                 self.targets[i].append(target)
 
-        # self.targets = [[] for _ in range(count_line(self.target_filepaths[0]))]
-        # for filepath in self.target_filepaths:
-        #     for idx, line in enumerate(yield_lines(filepath)):
-        #         self.targets[idx].append(line)
 
 
 def train(args):
@@ -483,7 +450,6 @@ def train(args):
 
     print("Initialize model")
     model = T5FineTuner(args)
-    #model = T5FineTuner.load_from_checkpoint('Xinyu/experiments/exp_wikilargeF_0_0/checkpoint-epoch=2.ckpt')
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)
@@ -502,8 +468,3 @@ def train(args):
     trainer.fit(model)
 
     print("training finished")
-
-    # print("Saving model")
-    # model.model.save_pretrained(args.output_dir)
-
-    # print("Saved model")

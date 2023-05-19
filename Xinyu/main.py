@@ -11,7 +11,7 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 # -- end fix path --
 
-from preprocessor import D_WIKI,D_WIKI_SMALL,D_WIKI_CLEAN, D_WIKI_MATCH, WIKI_DOC_MID, TURKCORPUS_DATASET, EXP_DIR, WIKI_DOC, WIKI_PARAGH_SMALL, WIKI_DOC_Small, WIKI_PARA_DATASET, Preprocessor,EPFL_NEWS, WIKILARGE_DATASET,WIKILARGE_FILTER_DATASET,WIKI_PARAGH_FILTER_DATASET, WIKI_DOC_CLEAN, WIKI_DOC_MATCH, WIKI_DOC_FINAL
+from preprocessor import WIKI_DOC, D_WIKI, EXP_DIR
 import time
 import json
 
@@ -23,9 +23,9 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from optuna.integration import PyTorchLightningPruningCallback
 
-from T5_2 import SumSim, train
+#from T5_2 import SumSim, train
 #from Bart2 import SumSim, train
-#from Bart_baseline_finetuned import BartBaseLineFineTuned, train
+from Bart_baseline_finetuned import BartBaseLineFineTuned, train
 #from T5_baseline_finetuned import T5BaseLineFineTuned, train
 
 
@@ -34,8 +34,8 @@ def parse_arguments():
                   
     p.add_argument('--seed', type=int, default=42, help='randomization seed')
 
-    p = SumSim.add_model_specific_args(p)
-    #p = BartBaseLineFineTuned.add_model_specific_args(p)
+    #p = SumSim.add_model_specific_args(p)
+    p = BartBaseLineFineTuned.add_model_specific_args(p)
     #p = T5BaseLineFineTuned.add_model_specific_args(p)
     p = pl.Trainer.add_argparse_args(p)
     args,_ = p.parse_known_args()
@@ -77,7 +77,7 @@ def run_training(args, dataset):
 
 
 
-dataset = WIKI_DOC_FINAL
+dataset = WIKI_DOC
 args = parse_arguments()
 run_training(args, dataset)
 

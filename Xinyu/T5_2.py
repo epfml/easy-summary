@@ -20,7 +20,7 @@ import os
 import logging
 import random
 import nltk
-from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
+from preprocessor import  get_data_filepath
 #from sentence_transformers import SentenceTransformer, util
 
 nltk.download('punkt')
@@ -76,9 +76,6 @@ class SumSim(pl.LightningModule):
 
         self.CosSim = nn.CosineSimilarity(dim = 2, eps = 1e-6)
         self.relu = nn.ReLU()
-        
-#        self.args.learning_rate = 1e-4
-        #self.args.num_train_epochs = 5
 
 
     def is_logger(self):
@@ -215,13 +212,7 @@ class SumSim(pl.LightningModule):
 
 
         if self.args.custom_loss:
-            '''
-            Custom Loss:
-            Loss = oiginal_loss + lambda**2 * complexity_score
 
-            - ratio: control the ratio of sentences we want to compute complexity for training.
-            - lambda: control the weight of the complexity loss.
-            '''
             
             loss = sim_outputs.loss * self.args.w1
             #loss += sum_outputs.loss * self.args.w2
@@ -308,11 +299,8 @@ class SumSim(pl.LightningModule):
             pred_sent = generate(source)
             pred_sents.append(pred_sent)
 
-        ### WIKI-large ###
         score = corpus_sari(batch["source"], pred_sents, [batch["targets"]])
 
-        ### turkcorpuse ###
-        #score = corpus_sari(batch["source"], pred_sents, batch["targets"])
 
         print("Sari score: ", score)
 
@@ -460,13 +448,10 @@ class TrainDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=512, sample_size=1):
         self.sample_size = sample_size
         print("init TrainDataset ...")
-        self.source_filepath = get_data_filepath(dataset,'train','complex_kw_num4_div0.9') #_kw_num4_div0.7
+        self.source_filepath = get_data_filepath(dataset,'train','complex') 
         self.target_filepath = get_data_filepath(dataset,'train','simple')
         print("source_filepath: ", self.source_filepath)
         print("Initialized dataset done.....")
-        # preprocessor = load_preprocessor()
-        # self.source_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex')
-        # self.target_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'simple')
 
         self.max_len = max_len
         self.tokenizer = tokenizer
@@ -482,10 +467,7 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         source = self.inputs[index]
-         ### add keywords
-        # key_words = kw_model.extract_keywords(source, keyphrase_ngram_range=(1, 2), stop_words=None)
-        # for i in range(min(len(key_words), 3)):
-        #     source = key_words[i][0] + ' ' + source
+
 
         source = "summarize: " + self.inputs[index]
         target = self.targets[index]
@@ -518,18 +500,10 @@ class TrainDataset(Dataset):
 class ValDataset(Dataset):
     def __init__(self, dataset, tokenizer, max_len=512, sample_size=1):
         self.sample_size = sample_size
-        ### WIKI-large dataset ###
-        self.source_filepath = get_data_filepath(dataset, 'valid', 'complex_kw_num4_div0.9')#
+        
+        self.source_filepath = get_data_filepath(dataset, 'valid', 'complex')#
         self.target_filepaths = get_data_filepath(dataset, 'valid', 'simple')
 
-        ### turkcorpus dataset ###
-        # self.source_filepath = get_data_filepath(TURKCORPUS_DATASET, 'valid', 'complex')
-        # self.target_filepaths = [get_data_filepath(TURKCORPUS_DATASET, 'valid', 'simple.turk',i)for i in range(8)]
-        # if dataset == NEWSELA_DATASET:
-        #     self.target_filepaths = [get_data_filepath(dataset, 'valid', 'simple')]
-
-        # else:  # TURKCORPUS_DATASET as default
-        #     self.target_filepaths = [get_data_filepath(TURKCORPUS_DATASET, 'valid', 'simple.turk', i) for i in range(8)]
 
         self.max_len = max_len
         self.tokenizer = tokenizer
@@ -552,16 +526,7 @@ class ValDataset(Dataset):
         for target in yield_lines(self.target_filepaths):
             self.targets.append(target)
 
-        ### turkcorpus dataset ###
-        # self.targets = [ [] for _ in range(count_line(self.target_filepaths[0]))]
-        # for file_path in self.target_filepaths:
-        #     for i, target in enumerate(yield_lines(file_path)):
-        #         self.targets[i].append(target)
 
-        # self.targets = [[] for _ in range(count_line(self.target_filepaths[0]))]
-        # for filepath in self.target_filepaths:
-        #     for idx, line in enumerate(yield_lines(filepath)):
-        #         self.targets[idx].append(line)
 
 
 def train(args):
@@ -600,10 +565,8 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     #torch.cuda.set_device(0)
     model = SumSim(args)
-    #model = SumSim.load_from_checkpoint("Xinyu/experiments/exp_1669794353772479/checkpoint-epoch=2.ckpt")
     model.args.dataset = args.dataset
     print(model.args.dataset)
-    #model = T5FineTuner(**train_args)
     print(args.dataset)
     trainer = pl.Trainer(**train_params)
     # trainer = pl.Trainer.from_argparse_args(
@@ -619,8 +582,3 @@ def train(args):
     trainer.fit(model)
 
     print("training finished")
-
-    # print("Saving model")
-    # model.model.save_pretrained(args.output_dir)
-
-    # print("Saved model")

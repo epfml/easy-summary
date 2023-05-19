@@ -1,6 +1,4 @@
-'''
-sum_sim model
-'''
+
 
 from functools import lru_cache
 from gc import callbacks
@@ -20,7 +18,7 @@ import os
 import logging
 import random
 import nltk
-from preprocessor import  get_data_filepath, TURKCORPUS_DATASET, NEWSELA_DATASET
+from preprocessor import  get_data_filepath
 from summarizer import Summarizer
 
 nltk.download('punkt')
@@ -39,7 +37,7 @@ from transformers import (
     BartForConditionalGeneration, BartTokenizer,pipeline,BartTokenizerFast, BartModel, PreTrainedTokenizerFast,
     get_linear_schedule_with_warmup, AutoConfig, AutoModel
 )
-from Ts_BART import BartFineTuner
+
 #BERT_Sum = Summarizer(model='distilbert-base-uncased')
 
 class MetricsCallback(pl.Callback):
@@ -59,14 +57,11 @@ class BartBaseLineFineTuned(pl.LightningModule):
         self.args = args
         self.save_hyperparameters()
         
-        # Load pre-trained model and tokenizer
-        #self.model = BartFineTuner.load_from_checkpoint("Xinyu/experiments/exp_BART_FineTuned_WikiLarge/checkpoint-epoch=4.ckpt")
-        #self.model = self.model.model.to(self.args.device)
+
         self.model = BartForConditionalGeneration.from_pretrained(self.args.sum_model)
         self.model = self.model.to(self.args.device)
-        self.tokenizer = BartTokenizerFast.from_pretrained(self.args.sum_model)
+        self.tokenizer = BartTokenizer.from_pretrained(self.args.sum_model)
         
-#        self.args.learning_rate = 1e-4
 
 
     def is_logger(self):
@@ -103,22 +98,9 @@ class BartBaseLineFineTuned(pl.LightningModule):
         )
 
         if self.args.custom_loss:
-            '''
-            Custom Loss:
-            Loss = oiginal_loss + lambda**2 * complexity_score
 
-            - ratio: control the ratio of sentences we want to compute complexity for training.
-            - lambda: control the weight of the complexity loss.
-            '''
             loss = outputs.loss
-            #loss += sum_outputs.loss
 
-
-
-
-            
-            # self.manual_backward(loss)
-            # self.opt.step()
             
             self.log('train_loss', loss, on_step=True, prog_bar=True, logger=True)
             # print(loss)
@@ -141,7 +123,6 @@ class BartBaseLineFineTuned(pl.LightningModule):
 
     def sari_validation_step(self, batch):
         def generate(sentence):
-            #sentence = self.preprocessor.encode_sentence(sentence)
             text = sentence
             encoding = self.tokenizer(
             [text],
@@ -181,11 +162,9 @@ class BartBaseLineFineTuned(pl.LightningModule):
             pred_sent = generate(source)
             pred_sents.append(pred_sent)
 
-        ### WIKI-large ###
+
         score = corpus_sari(batch["source"], pred_sents, [batch["targets"]])
 
-        ### turkcorpuse ###
-        #score = corpus_sari(batch["source"], pred_sents, batch["targets"])
 
         print("Sari score: ", score)
 
@@ -259,10 +238,10 @@ class BartBaseLineFineTuned(pl.LightningModule):
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)
       # facebook/bart-base Yale-LILY/brio-cnndm-uncased ainize/bart-base-cnn
-      p.add_argument('-Summarizer','--sum_model', default='ainize/bart-base-cnn')
+      p.add_argument('-Summarizer','--sum_model', default='Yale-LILY/brio-cnndm-uncased')
       p.add_argument('-TrainBS','--train_batch_size',type=int, default=6)
       p.add_argument('-ValidBS','--valid_batch_size',type=int, default=6)
-      p.add_argument('-lr','--learning_rate',type=float, default=5e-5)
+      p.add_argument('-lr','--learning_rate',type=float, default=1e-5)
       p.add_argument('-MaxSeqLen','--max_seq_length',type=int, default=256)
       p.add_argument('-AdamEps','--adam_epsilon', default=1e-8)
       p.add_argument('-WeightDecay','--weight_decay', default = 0.0001)
@@ -317,10 +296,7 @@ class TrainDataset(Dataset):
         self.target_filepath = get_data_filepath(dataset,'train','simple')
         print(self.source_filepath)
         print("Initialized dataset done.....")
-        # preprocessor = load_preprocessor()
-        # self.source_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'complex')
-        # self.target_filepath = preprocessor.get_preprocessed_filepath(dataset, 'train', 'simple')
-
+      
         self.max_len = max_len
         self.tokenizer = tokenizer
 
@@ -335,7 +311,6 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
         source = self.inputs[index]
-        #source = "summarize: " + self.inputs[index]
         target = self.targets[index]
 
         tokenized_inputs = self.tokenizer(
@@ -370,14 +345,6 @@ class ValDataset(Dataset):
         self.source_filepath = get_data_filepath(dataset, 'valid', 'complex')
         self.target_filepaths = get_data_filepath(dataset, 'valid', 'simple')
         print(self.source_filepath)
-        ### turkcorpus dataset ###
-        # self.source_filepath = get_data_filepath(TURKCORPUS_DATASET, 'valid', 'complex')
-        # self.target_filepaths = [get_data_filepath(TURKCORPUS_DATASET, 'valid', 'simple.turk',i)for i in range(8)]
-        # if dataset == NEWSELA_DATASET:
-        #     self.target_filepaths = [get_data_filepath(dataset, 'valid', 'simple')]
-
-        # else:  # TURKCORPUS_DATASET as default
-        #     self.target_filepaths = [get_data_filepath(TURKCORPUS_DATASET, 'valid', 'simple.turk', i) for i in range(8)]
 
         self.max_len = max_len
         self.tokenizer = tokenizer
@@ -400,16 +367,6 @@ class ValDataset(Dataset):
         for target in yield_lines(self.target_filepaths):
             self.targets.append(target)
 
-        ### turkcorpus dataset ###
-        # self.targets = [ [] for _ in range(count_line(self.target_filepaths[0]))]
-        # for file_path in self.target_filepaths:
-        #     for i, target in enumerate(yield_lines(file_path)):
-        #         self.targets[i].append(target)
-
-        # self.targets = [[] for _ in range(count_line(self.target_filepaths[0]))]
-        # for filepath in self.target_filepaths:
-        #     for idx, line in enumerate(yield_lines(filepath)):
-        #         self.targets[idx].append(line)
 
 
 def train(args):
@@ -446,8 +403,7 @@ def train(args):
     print("Initialize model")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = BartBaseLineFineTuned(args)
-    #model = BartBaseLineFineTuned.load_from_checkpoint('Xinyu/experiments/exp_DWikiMatch_BARTSingle(bart_base_cnn)/checkpoint-epoch=2.ckpt')
-    
+ 
     model.args.dataset = args.dataset
     print(model.args.dataset)
     #model = T5FineTuner(**train_args)
@@ -469,5 +425,3 @@ def train(args):
 
     # print("Saving model")
     # model.model.save_pretrained(args.output_dir)
-
-    # print("Saved model")
