@@ -24,7 +24,7 @@ python main.py
 `Bart2.py` and `T5_2.py` means our SimSum model with BART and T5 as the backbone. For the single model, use the `Bart_baseline_finetuned.py` and `T5_baseline_finetuned.py`.
 
 
-## Evaluation
+## Automatic Evaluation
 To evaluate the model,
 ```
 python evaluate.py
@@ -32,3 +32,6 @@ python evaluate.py
 
 which will compute the SARI, D-SARI, BLEU and FKGL score.
 ![](/fig/WechatIMG11.png)
+
+## Human Evaluation
+![](/fig/WechatIMG13.png)
