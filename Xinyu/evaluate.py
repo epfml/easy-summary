@@ -1,5 +1,5 @@
 '''
-Evaluate the SARI score and Other metric of TurkCorpus test dataset
+Evaluate the SARI score and Other metric
 '''
 
 from pathlib import Path

@@ -194,10 +194,6 @@ class SumSim(pl.LightningModule):
         
 
 
-        # ### KL Divergence ###
-        # H1 = torch.transpose((torch.transpose(H1, 1,2)@self.Q), 1,2)
-        # H2 = torch.transpose((torch.transpose(H2, 1,2)@self.Q), 1,2)
-
 
         Rep1 = torch.matmul(H_sim, self.W)
         Rep2 = torch.matmul(H2, self.W)

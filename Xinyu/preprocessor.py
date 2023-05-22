@@ -1,5 +1,6 @@
 '''
-Preprocess the original dataset and get special-tokened sentences
+Preprocess the original dataset and get special-tokened sentences, which not used in
+our paper.
 From https://github.com/KimChengSHEANG/TS_T5/blob/main/source/preprocessor.py
 '''
 
