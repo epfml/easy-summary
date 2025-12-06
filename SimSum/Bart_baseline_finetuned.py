@@ -29,8 +29,8 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 from pytorch_lightning.trainer import seed_everything
+from torch.optim import AdamW
 from transformers import (
-    AdamW,
     T5ForConditionalGeneration,
     T5TokenizerFast,
     BertTokenizer, BertForPreTraining,
@@ -215,7 +215,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
                                 drop_last=True,
                                 shuffle=True,
                                 pin_memory=True,
-                                num_workers=4)
+                                num_workers=0)
         t_total = ((len(dataloader.dataset) // (self.args.train_batch_size * max(1, self.args.n_gpu)))
                    // self.args.gradient_accumulation_steps
                    * float(self.args.num_train_epochs)
@@ -233,7 +233,7 @@ class BartBaseLineFineTuned(pl.LightningModule):
                                  sample_size=self.args.valid_sample_size)
         return DataLoader(val_dataset,
                           batch_size=self.args.valid_batch_size,
-                          num_workers=4)
+                          num_workers=0)
     @staticmethod
     def add_model_specific_args(parent_parser):
       p = ArgumentParser(parents=[parent_parser],add_help = False)

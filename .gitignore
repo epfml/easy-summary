@@ -14,6 +14,16 @@ muss
 *access
 *SBU
 
+# Debug/output files
+output*.txt
+error_log.txt
+install_log.txt
+*.log
+
+# IDE settings
+.vscode/
+.idea/
+
 *sub_captions
 # C extensions
 *.so

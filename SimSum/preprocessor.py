@@ -65,7 +65,7 @@ def tokenize(sentence):
 def write_lines(lines, filepath):
     filepath = Path(filepath)
     filepath.parent.mkdir(parents=True, exist_ok=True)
-    with filepath.open("w") as fout:
+    with filepath.open("w", encoding='utf-8') as fout:
         for line in lines:
             fout.write(line + '\n')
 
@@ -76,21 +76,21 @@ def read_lines(filepath):
 
 def yield_lines(filepath):
     filepath = Path(filepath)
-    with filepath.open('r') as f:
+    with filepath.open('r', encoding='utf-8') as f:
         for line in f:
             yield line.rstrip()
 
 
 def yield_sentence_pair_with_index(filepath1, filepath2):
     index = 0
-    with Path(filepath1).open('r') as f1, Path(filepath2).open('r') as f2:
+    with Path(filepath1).open('r', encoding='utf-8') as f1, Path(filepath2).open('r', encoding='utf-8') as f2:
         for line1, line2 in zip(f1, f2):
             index += 1
             yield (line1.rstrip(), line2.rstrip(), index)
             
 
 def yield_sentence_pair(filepath1, filepath2):
-    with Path(filepath1).open('r') as f1, Path(filepath2).open('r') as f2:
+    with Path(filepath1).open('r', encoding='utf-8') as f1, Path(filepath2).open('r', encoding='utf-8') as f2:
         for line1, line2 in zip(f1, f2):
             yield line1.rstrip(), line2.rstrip()
 
@@ -98,7 +98,7 @@ def yield_sentence_pair(filepath1, filepath2):
 def count_line(filepath):
     filepath = Path(filepath)
     line_count = 0
-    with filepath.open("r") as f:
+    with filepath.open("r", encoding='utf-8') as f:
         for line in f:
             line_count += 1
     return line_count
